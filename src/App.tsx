@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LangProvider } from './contexts/LangContext';
 import DataProvider from './components/DataProvider';
+import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/landing/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -53,14 +54,16 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <LangProvider>
-        <DataProvider>
-          <AuthProvider>
-            <AppRoutes />
-          </AuthProvider>
-        </DataProvider>
-      </LangProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <LangProvider>
+          <DataProvider>
+            <AuthProvider>
+              <AppRoutes />
+            </AuthProvider>
+          </DataProvider>
+        </LangProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

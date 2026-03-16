@@ -2,7 +2,7 @@ import type {
   User, Horse, Task, ClientRequest, Announcement, Transport, Notification, ScheduleEvent,
 } from '../types';
 import { sanitizeObject } from '../utils/sanitize';
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 
 // ── Table names ─────────────────────────────────────────────
 const T = {
@@ -56,6 +56,12 @@ export async function initializeData(): Promise<void> {
 
   _initPromise = (async () => {
     try {
+      if (!isSupabaseConfigured) {
+        console.warn('Supabase not configured — running with empty state.');
+        _initialized = true;
+        return;
+      }
+
       const [users, horses, tasks, requests, announcements, transports, notifications] = await Promise.all([
         supabase.from(T.users).select('*').order('created_at', { ascending: false }),
         supabase.from(T.horses).select('*').order('created_at', { ascending: false }),
@@ -90,6 +96,7 @@ export function isDataReady(): boolean {
 
 // ── Async DB helpers (fire-and-forget) ──────────────────────
 function dbInsert(table: string, data: Record<string, unknown>) {
+  if (!isSupabaseConfigured) return;
   const snakeData = camelToSnake(data);
   supabase.from(table).insert(snakeData).then(({ error }) => {
     if (error) console.error(`[Supabase] Insert error on ${table}:`, error);
@@ -97,6 +104,7 @@ function dbInsert(table: string, data: Record<string, unknown>) {
 }
 
 function dbUpdate(table: string, id: string, data: Record<string, unknown>) {
+  if (!isSupabaseConfigured) return;
   const snakeData = camelToSnake(data);
   delete snakeData.id;
   supabase.from(table).update(snakeData).eq('id', id).then(({ error }) => {
@@ -105,6 +113,7 @@ function dbUpdate(table: string, id: string, data: Record<string, unknown>) {
 }
 
 function dbDelete(table: string, id: string) {
+  if (!isSupabaseConfigured) return;
   supabase.from(table).delete().eq('id', id).then(({ error }) => {
     if (error) console.error(`[Supabase] Delete error on ${table}:`, error);
   });
