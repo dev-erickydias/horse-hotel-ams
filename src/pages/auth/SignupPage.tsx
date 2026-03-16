@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { isValidEmail, sanitizePhone } from '../../utils/sanitize';
 import LangSwitcher from '../../components/ui/LangSwitcher';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -22,6 +23,18 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
 
+    // Validate name length
+    if (name.trim().length < 2 || name.length > 100) {
+      setError(t.auth.invalidName || 'Name must be between 2 and 100 characters.');
+      return;
+    }
+
+    // Validate email format
+    if (!isValidEmail(email)) {
+      setError(t.auth.invalidEmail || 'Please enter a valid email address.');
+      return;
+    }
+
     if (password.length < 4) {
       setError(t.auth.passwordTooShort);
       return;
@@ -31,7 +44,7 @@ export default function SignupPage() {
       return;
     }
 
-    const existing = api.getUserByEmail(email);
+    const existing = api.getUserByEmail(email.trim().toLowerCase());
     if (existing) {
       setError(t.auth.emailInUse);
       return;
@@ -39,9 +52,9 @@ export default function SignupPage() {
 
     // Create user with 'pending' status
     api.createUser({
-      name,
-      email,
-      phone: phone || undefined,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone ? sanitizePhone(phone) : undefined,
       role: 'client', // Default role, admin will change
       status: 'pending',
       password,

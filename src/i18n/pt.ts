@@ -110,6 +110,8 @@ export const pt: Translations = {
     passwordMismatch: 'As senhas não coincidem',
     passwordTooShort: 'A senha deve ter pelo menos 4 caracteres',
     emailInUse: 'Este email já está cadastrado',
+    invalidEmail: 'Por favor, insira um endereço de email válido',
+    invalidName: 'O nome deve ter entre 2 e 100 caracteres',
     namePlaceholder: 'Digite seu nome completo',
     phonePlaceholder: 'Digite seu telefone (opcional)',
     fullName: 'Nome Completo',

@@ -111,6 +111,8 @@ export const en = {
     passwordMismatch: 'Passwords do not match',
     passwordTooShort: 'Password must be at least 4 characters',
     emailInUse: 'This email is already registered',
+    invalidEmail: 'Please enter a valid email address',
+    invalidName: 'Name must be between 2 and 100 characters',
     namePlaceholder: 'Enter your full name',
     phonePlaceholder: 'Enter your phone (optional)',
     fullName: 'Full Name',

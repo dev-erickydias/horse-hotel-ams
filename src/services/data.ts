@@ -1,6 +1,7 @@
 import type {
   User, Horse, Task, ClientRequest, Announcement, Transport, Notification, ScheduleEvent,
 } from '../types';
+import { sanitizeObject } from '../utils/sanitize';
 
 let _idCounter = Date.now();
 function genId(): string { return (++_idCounter).toString(36); }
@@ -55,14 +56,16 @@ export function resetData() {
 }
 
 function create<T extends { id: string }>(key: keyof AppState, item: Omit<T, 'id'>): T {
-  const newItem = { ...item, id: genId() } as T;
+  const sanitized = sanitizeObject(item);
+  const newItem = { ...sanitized, id: genId() } as T;
   (state[key] as T[]).unshift(newItem); persist(); return newItem;
 }
 function update<T extends { id: string }>(key: keyof AppState, id: string, updates: Partial<T>): T | undefined {
   const arr = state[key] as T[];
   const idx = arr.findIndex((item) => item.id === id);
   if (idx === -1) return undefined;
-  arr[idx] = { ...arr[idx], ...updates }; persist(); return arr[idx];
+  const sanitized = sanitizeObject(updates);
+  arr[idx] = { ...arr[idx], ...sanitized }; persist(); return arr[idx];
 }
 function remove(key: keyof AppState, id: string): boolean {
   const arr = state[key] as { id: string }[];

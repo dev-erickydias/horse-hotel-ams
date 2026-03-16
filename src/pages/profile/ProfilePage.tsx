@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { sanitizePhone } from '../../utils/sanitize';
 import Header from '../../components/layout/Header';
 import Card, { CardBody } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -50,7 +51,8 @@ export default function ProfilePage() {
 
   const saveProfile = () => {
     if (!user) return;
-    api.updateUser(user.id, { name: profileForm.name, phone: profileForm.phone });
+    if (!profileForm.name.trim() || profileForm.name.trim().length < 2) return;
+    api.updateUser(user.id, { name: profileForm.name.trim(), phone: profileForm.phone ? sanitizePhone(profileForm.phone) : '' });
     setEditingProfile(false);
     setSavedMsg(t.profile.savedSuccess);
     setTimeout(() => setSavedMsg(''), 3000);

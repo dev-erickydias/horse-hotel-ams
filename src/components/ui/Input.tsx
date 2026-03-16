@@ -6,11 +6,12 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className = '', ...props }, ref) => (
+  ({ label, error, className = '', maxLength, ...props }, ref) => (
     <div className="space-y-1.5">
       {label && <label className="block text-sm font-medium text-stone-700">{label}</label>}
       <input
         ref={ref}
+        maxLength={maxLength || 500}
         className={`w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : ''} ${className}`}
         {...props}
       />
@@ -26,11 +27,12 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, className = '', ...props }, ref) => (
+  ({ label, error, className = '', maxLength, ...props }, ref) => (
     <div className="space-y-1.5">
       {label && <label className="block text-sm font-medium text-stone-700">{label}</label>}
       <textarea
         ref={ref}
+        maxLength={maxLength || 2000}
         className={`w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all resize-none ${error ? 'border-red-400' : ''} ${className}`}
         rows={4}
         {...props}

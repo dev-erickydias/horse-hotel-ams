@@ -110,6 +110,8 @@ export const nl: Translations = {
     passwordMismatch: 'Wachtwoorden komen niet overeen',
     passwordTooShort: 'Wachtwoord moet minimaal 4 tekens bevatten',
     emailInUse: 'Dit e-mailadres is al geregistreerd',
+    invalidEmail: 'Voer een geldig e-mailadres in',
+    invalidName: 'Naam moet tussen 2 en 100 tekens bevatten',
     namePlaceholder: 'Voer uw volledige naam in',
     phonePlaceholder: 'Voer uw telefoonnummer in (optioneel)',
     fullName: 'Volledige Naam',

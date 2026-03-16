@@ -19,7 +19,7 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const result = login(email, password);
+    const result = login(email.trim().toLowerCase(), password);
     if (result.success) navigate('/app/dashboard');
     else if (result.error === 'pending') setError('pending');
     else setError(t.auth.invalidCredentials);
