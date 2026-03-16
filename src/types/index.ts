@@ -1,11 +1,13 @@
 // ── User & Auth ──────────────────────────────────────────
 export type Role = 'admin' | 'worker' | 'client';
+export type UserStatus = 'pending' | 'active';
 
 export interface User {
   id: string;
   email: string;
   name: string;
   role: Role;
+  status?: UserStatus;
   avatar?: string;
   phone?: string;
   password?: string;
@@ -16,6 +18,8 @@ export interface User {
 // ── Horses ───────────────────────────────────────────────
 export type StableType = 'shavings' | 'straw';
 export type StableLocation = 'stable-a' | 'stable-b' | 'stable-c' | 'stable-d' | 'pension-left' | 'pension-middle' | 'pension-right';
+export type FoodType = 'hay' | 'grass' | 'both';
+export type FeedType = 'standard' | 'client-prepared' | 'other';
 
 export interface Horse {
   id: string;
@@ -26,6 +30,8 @@ export interface Horse {
   ownerName: string;
   checkIn: string;
   checkOut: string;
+  checkInTime?: string;
+  checkOutTime?: string;
   stableType: StableType;
   stableLocation: StableLocation;
   walkerSchedule: boolean;
@@ -37,6 +43,11 @@ export interface Horse {
   notes?: string;
   imageUrl?: string;
   status: 'upcoming' | 'checked-in' | 'checked-out';
+  // Special care fields
+  foodType?: FoodType;
+  feedType?: FeedType;
+  feedOther?: string;
+  specialCare?: string;
 }
 
 // ── Tasks ────────────────────────────────────────────────
@@ -68,21 +79,28 @@ export interface ClientRequest {
   description: string;
   facilityType?: string;
   requestedDate?: string;
+  requestedTime?: string;
+  requestedEndTime?: string;
   status: RequestStatus;
   adminNotes?: string;
   createdAt: string;
 }
 
 // ── Announcements ────────────────────────────────────────
+export type AnnouncementAudience = 'all' | 'staff' | 'clients';
+
 export interface Announcement {
   id: string;
   title: string;
   content: string;
   category: 'general' | 'maintenance' | 'transport' | 'important';
+  audience: AnnouncementAudience;
   authorId: string;
   authorName: string;
   pinned: boolean;
   createdAt: string;
+  archived?: boolean;
+  archivedAt?: string;
 }
 
 // ── Transport ────────────────────────────────────────────
@@ -91,8 +109,10 @@ export interface Transport {
   horseId: string;
   horseName: string;
   transportDate: string;
+  transportTime?: string;
   origin: string;
   destination: string;
+  driverId?: string;
   driver: string;
   notes?: string;
   status: 'scheduled' | 'in-transit' | 'completed';
@@ -100,7 +120,8 @@ export interface Transport {
 }
 
 // ── Notifications ────────────────────────────────────────
-export type NotificationType = 'arrival' | 'departure' | 'request' | 'task' | 'transport' | 'announcement';
+export type NotificationType = 'arrival' | 'departure' | 'request' | 'task' | 'transport' | 'announcement' | 'registration';
+export type NotificationAudience = 'all' | 'staff' | 'clients';
 
 export interface Notification {
   id: string;
@@ -110,4 +131,26 @@ export interface Notification {
   read: boolean;
   createdAt: string;
   link?: string;
+  audience?: NotificationAudience;
+  targetUserId?: string;
+  sourceId?: string;
+}
+
+// ── Schedule Events ──────────────────────────────────────
+export type ScheduleEventType = 'booking' | 'transport' | 'arrival' | 'departure';
+
+export interface ScheduleEvent {
+  id: string;
+  type: ScheduleEventType;
+  title: string;
+  date: string;
+  time?: string;
+  endTime?: string;
+  userId?: string;
+  userName?: string;
+  horseId?: string;
+  horseName?: string;
+  facilityType?: string;
+  sourceId: string;
+  editable: boolean;
 }

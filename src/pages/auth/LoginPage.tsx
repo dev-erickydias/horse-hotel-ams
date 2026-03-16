@@ -5,7 +5,7 @@ import { useLang } from '../../contexts/LangContext';
 import LangSwitcher from '../../components/ui/LangSwitcher';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { LogIn, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { LogIn, Eye, EyeOff, ArrowLeft, Clock } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,7 +21,8 @@ export default function LoginPage() {
     setError('');
     const result = login(email, password);
     if (result.success) navigate('/app/dashboard');
-    else setError(result.error || t.auth.invalidCredentials);
+    else if (result.error === 'pending') setError('pending');
+    else setError(t.auth.invalidCredentials);
   };
 
   return (
@@ -50,7 +51,15 @@ export default function LoginPage() {
 
         <div className="bg-white rounded-2xl shadow-2xl p-8 animate-slide-up">
           <h2 className="text-lg font-semibold text-stone-900 mb-6">{t.auth.signInTitle}</h2>
-          {error && <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
+          {error === 'pending' && (
+            <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+              <div className="flex items-start gap-3">
+                <Clock className="text-amber-600 shrink-0 mt-0.5" size={16} />
+                <p className="text-sm text-amber-800">{t.auth.accountPending}</p>
+              </div>
+            </div>
+          )}
+          {error && error !== 'pending' && <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label={t.auth.email} type="email" placeholder={t.auth.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} required />
             <div className="relative">
@@ -61,6 +70,11 @@ export default function LoginPage() {
             </div>
             <Button type="submit" className="w-full" icon={<LogIn size={16} />}>{t.common.login}</Button>
           </form>
+
+          <p className="text-center text-sm text-stone-500 mt-5">
+            {t.auth.noAccount}{' '}
+            <Link to="/signup" className="text-amber-600 hover:text-amber-700 font-medium">{t.auth.signUp}</Link>
+          </p>
         </div>
       </div>
     </div>

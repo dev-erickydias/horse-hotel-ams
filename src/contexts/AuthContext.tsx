@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!found) return { success: false, error: 'invalid' };
     if (!found.password) return { success: false, error: 'invalid' };
     if (found.password !== password) return { success: false, error: 'invalid' };
+    if (found.status === 'pending') return { success: false, error: 'pending' };
     setUser(found);
     localStorage.setItem('horse_hotel_auth', JSON.stringify(found));
     return { success: true };

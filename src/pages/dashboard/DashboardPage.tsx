@@ -20,10 +20,10 @@ export default function DashboardPage() {
   const transports = useMemo(() => api.getTransports(), []);
 
   const checkedIn = horses.filter((h) => h.status === 'checked-in');
-  const arrivingToday = horses.filter((h) => isToday(parseISO(h.checkIn)) && h.status === 'upcoming');
-  const arrivingSoon = horses.filter((h) => { const d = parseISO(h.checkIn); return (isTomorrow(d) || (!isPast(d) && !isToday(d))) && h.status === 'upcoming'; });
-  const departingToday = horses.filter((h) => isToday(parseISO(h.checkOut)) && h.status === 'checked-in');
-  const departingSoon = horses.filter((h) => isTomorrow(parseISO(h.checkOut)) && h.status === 'checked-in');
+  const arrivingToday = horses.filter((h) => h.checkIn && isToday(parseISO(h.checkIn)) && h.status === 'upcoming');
+  const arrivingSoon = horses.filter((h) => { if (!h.checkIn) return false; const d = parseISO(h.checkIn); return (isTomorrow(d) || (!isPast(d) && !isToday(d))) && h.status === 'upcoming'; });
+  const departingToday = horses.filter((h) => h.checkOut && isToday(parseISO(h.checkOut)) && h.status === 'checked-in');
+  const departingSoon = horses.filter((h) => h.checkOut && isTomorrow(parseISO(h.checkOut)) && h.status === 'checked-in');
   const inQuarantine = horses.filter((h) => h.quarantine && h.status === 'checked-in');
   const pendingTasks = tasks.filter((tt) => !tt.completed);
   const urgentTasks = pendingTasks.filter((tt) => tt.priority === 'urgent' || tt.priority === 'high');
@@ -37,7 +37,7 @@ export default function DashboardPage() {
         { label: t.dashboard.scheduledTransports, value: transports.filter((tt) => tt.status === 'scheduled').length, icon: Truck, color: 'bg-emerald-50 text-emerald-600', onClick: () => navigate('/app/transport') },
       ]
     : [
-        { label: t.dashboard.myHorses, value: horses.length, icon: Slack, color: 'bg-amber-50 text-amber-600', onClick: () => navigate('/app/bookings') },
+        { label: t.dashboard.myHorses, value: horses.length, icon: Slack, color: 'bg-amber-50 text-amber-600', onClick: () => navigate('/app/horses') },
         { label: t.dashboard.myRequests, value: requests.filter((r) => r.clientId === user!.id).length, icon: CalendarCheck, color: 'bg-purple-50 text-purple-600', onClick: () => navigate('/app/bookings') },
       ];
 

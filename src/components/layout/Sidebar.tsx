@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import {
   LayoutDashboard, Slack, ClipboardList, Users, Megaphone,
-  Truck, CalendarCheck, LogOut, ChevronLeft, Menu, X,
+  Truck, CalendarCheck, LogOut, ChevronLeft, Menu, X, UserCircle, Calendar,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -18,6 +18,7 @@ export default function Sidebar() {
     { to: '/app/horses', label: t.nav.horses, icon: Slack },
     { to: '/app/tasks', label: t.nav.tasks, icon: ClipboardList },
     { to: '/app/bookings', label: t.nav.bookings, icon: CalendarCheck },
+    { to: '/app/schedule', label: t.nav.schedule, icon: Calendar },
     { to: '/app/transport', label: t.nav.transport, icon: Truck },
     { to: '/app/announcements', label: t.nav.announcements, icon: Megaphone },
     { to: '/app/users', label: t.nav.users, icon: Users },
@@ -25,7 +26,10 @@ export default function Sidebar() {
 
   const clientLinks = [
     { to: '/app/dashboard', label: t.nav.dashboard, icon: LayoutDashboard },
+    { to: '/app/profile', label: t.nav.profile, icon: UserCircle },
+    { to: '/app/horses', label: t.nav.myHorses, icon: Slack },
     { to: '/app/bookings', label: t.nav.myRequests, icon: CalendarCheck },
+    { to: '/app/schedule', label: t.nav.schedule, icon: Calendar },
     { to: '/app/announcements', label: t.nav.announcements, icon: Megaphone },
   ];
 

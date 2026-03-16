@@ -1,5 +1,5 @@
 import type {
-  User, Horse, Task, ClientRequest, Announcement, Transport, Notification,
+  User, Horse, Task, ClientRequest, Announcement, Transport, Notification, ScheduleEvent,
 } from '../types';
 
 let _idCounter = Date.now();
@@ -12,7 +12,7 @@ const daysFromNow = (n: number) => {
 };
 
 const SEED_USERS: User[] = [
-  { id: 'u1', email: 'admin@admin.com', name: 'Admin', role: 'admin', phone: '+00 000 0000', password: 'admin', createdAt: '2024-01-01' },
+  { id: 'u1', email: 'admin@admin.com', name: 'Admin', role: 'admin', status: 'active', phone: '+00 000 0000', password: 'admin', createdAt: '2024-01-01' },
 ];
 
 const SEED_HORSES: Horse[] = [
@@ -27,10 +27,10 @@ const SEED_TASKS: Task[] = [
 ];
 
 const SEED_ANNOUNCEMENTS: Announcement[] = [
-  { id: 'a1', title: 'Welcome to the new system', content: 'We are excited to launch our new horse hotel management platform.', category: 'general', authorId: 'u1', authorName: 'Admin', pinned: true, createdAt: daysFromNow(-1) },
+  { id: 'a1', title: 'Welcome to the new system', content: 'We are excited to launch our new horse hotel management platform.', category: 'general', audience: 'all', authorId: 'u1', authorName: 'Admin', pinned: true, createdAt: daysFromNow(-1) },
 ];
 
-const STORAGE_KEY = 'horse_hotel_data_v3';
+const STORAGE_KEY = 'horse_hotel_data_v4';
 
 interface AppState {
   users: User[]; horses: Horse[]; tasks: Task[]; requests: ClientRequest[];
@@ -41,7 +41,7 @@ function getInitialState(): AppState {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) { try { return JSON.parse(stored); } catch { /* */ } }
   return { users: SEED_USERS, horses: SEED_HORSES, tasks: SEED_TASKS, requests: [], announcements: SEED_ANNOUNCEMENTS, transports: [], notifications: [
-    { id: 'n1', type: 'arrival', title: 'New Arrival Tomorrow', message: 'Thunder is arriving tomorrow.', read: false, createdAt: today(), link: '/app/horses' },
+    { id: 'n1', type: 'arrival', title: 'New Arrival Tomorrow', message: 'Thunder is arriving tomorrow.', read: false, createdAt: today(), link: '/app/horses', audience: 'staff' },
   ]};
 }
 
@@ -97,6 +97,37 @@ export const api = {
   updateRequest: (id: string, r: Partial<ClientRequest>) => update<ClientRequest>('requests', id, r),
 
   getAnnouncements: () => [...state.announcements],
+  getAnnouncementsForRole: (role: string) => {
+    // Auto-purge archived announcements older than 10 days
+    const tenDaysAgo = new Date(); tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+    const tenDaysAgoStr = tenDaysAgo.toISOString();
+    const before = state.announcements.length;
+    state.announcements = state.announcements.filter((a) => {
+      if (a.archived && a.archivedAt && a.archivedAt < tenDaysAgoStr) return false;
+      return true;
+    });
+    if (state.announcements.length !== before) persist();
+
+    return state.announcements.filter((a) => {
+      if (a.archived) return false; // hide archived from normal view
+      if (!a.audience || a.audience === 'all') return true;
+      if (a.audience === 'staff' && (role === 'admin' || role === 'worker')) return true;
+      if (a.audience === 'clients' && role === 'client') return true;
+      return false;
+    });
+  },
+  getArchivedAnnouncements: () => {
+    // Auto-purge archived announcements older than 10 days
+    const tenDaysAgo = new Date(); tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+    const tenDaysAgoStr = tenDaysAgo.toISOString();
+    state.announcements = state.announcements.filter((a) => {
+      if (a.archived && a.archivedAt && a.archivedAt < tenDaysAgoStr) return false;
+      return true;
+    });
+    return state.announcements.filter((a) => a.archived);
+  },
+  archiveAnnouncement: (id: string) => update<Announcement>('announcements', id, { archived: true, archivedAt: new Date().toISOString() }),
+  restoreAnnouncement: (id: string) => update<Announcement>('announcements', id, { archived: false, archivedAt: undefined }),
   createAnnouncement: (a: Omit<Announcement, 'id'>) => create<Announcement>('announcements', a),
   updateAnnouncement: (id: string, a: Partial<Announcement>) => update<Announcement>('announcements', id, a),
   deleteAnnouncement: (id: string) => remove('announcements', id),
@@ -106,7 +137,69 @@ export const api = {
   updateTransport: (id: string, t: Partial<Transport>) => update<Transport>('transports', id, t),
 
   getNotifications: () => [...state.notifications],
+  getNotificationsForUser: (userId: string, role: string) => {
+    return state.notifications.filter((n) => {
+      // If targeted to a specific user
+      if (n.targetUserId) return n.targetUserId === userId;
+      // Filter by audience
+      if (!n.audience || n.audience === 'all') return true;
+      if (n.audience === 'staff' && (role === 'admin' || role === 'worker')) return true;
+      if (n.audience === 'clients' && role === 'client') return true;
+      return false;
+    });
+  },
   markNotificationRead: (id: string) => update<Notification>('notifications', id, { read: true }),
   markAllRead: () => { state.notifications.forEach((n) => (n.read = true)); persist(); },
   addNotification: (n: Omit<Notification, 'id'>) => create<Notification>('notifications', n),
+
+  // Schedule: build from transports, requests, and horse check-ins/outs
+  getScheduleEvents: (): ScheduleEvent[] => {
+    const events: ScheduleEvent[] = [];
+
+    // Approved bookings
+    state.requests.filter((r) => r.status === 'approved' && r.requestedDate).forEach((r) => {
+      events.push({
+        id: `req-${r.id}`, type: 'booking', title: `${r.facilityType || 'Facility'}: ${r.clientName}`,
+        date: r.requestedDate!, time: r.requestedTime, endTime: r.requestedEndTime,
+        userId: r.clientId, userName: r.clientName, facilityType: r.facilityType,
+        sourceId: r.id, editable: true,
+      });
+    });
+
+    // Transports
+    state.transports.forEach((tr) => {
+      events.push({
+        id: `tr-${tr.id}`, type: 'transport', title: `Transport: ${tr.horseName}`,
+        date: tr.transportDate, time: tr.transportTime,
+        horseId: tr.horseId, horseName: tr.horseName,
+        sourceId: tr.id, editable: false,
+      });
+    });
+
+    // Horse arrivals
+    state.horses.filter((h) => (h.status === 'upcoming' || h.status === 'checked-in') && h.checkIn).forEach((h) => {
+      events.push({
+        id: `arr-${h.id}`, type: 'arrival', title: `Arrival: ${h.name}`,
+        date: h.checkIn, time: h.checkInTime,
+        horseId: h.id, horseName: h.name, userName: h.ownerName,
+        sourceId: h.id, editable: false,
+      });
+    });
+
+    // Horse departures
+    state.horses.filter((h) => (h.status === 'checked-in' || h.status === 'upcoming') && h.checkOut).forEach((h) => {
+      events.push({
+        id: `dep-${h.id}`, type: 'departure', title: `Departure: ${h.name}`,
+        date: h.checkOut, time: h.checkOutTime,
+        horseId: h.id, horseName: h.name, userName: h.ownerName,
+        sourceId: h.id, editable: false,
+      });
+    });
+
+    return events.sort((a, b) => {
+      const dateCompare = a.date.localeCompare(b.date);
+      if (dateCompare !== 0) return dateCompare;
+      return (a.time || '').localeCompare(b.time || '');
+    });
+  },
 };

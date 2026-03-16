@@ -5,6 +5,7 @@ import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/landing/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import SetPasswordPage from './pages/auth/SetPasswordPage';
+import SignupPage from './pages/auth/SignupPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import HorsesPage from './pages/horses/HorsesPage';
 import TasksPage from './pages/tasks/TasksPage';
@@ -12,6 +13,8 @@ import BookingsPage from './pages/bookings/BookingsPage';
 import TransportPage from './pages/transport/TransportPage';
 import AnnouncementsPage from './pages/announcements/AnnouncementsPage';
 import UsersPage from './pages/users/UsersPage';
+import ProfilePage from './pages/profile/ProfilePage';
+import SchedulePage from './pages/schedule/SchedulePage';
 import type { ReactNode } from 'react';
 
 function ProtectedRoute({ children, staffOnly = false }: { children: ReactNode; staffOnly?: boolean }) {
@@ -28,15 +31,18 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={user ? <Navigate to="/app/dashboard" replace /> : <LoginPage />} />
+      <Route path="/signup" element={user ? <Navigate to="/app/dashboard" replace /> : <SignupPage />} />
       <Route path="/set-password/:token" element={<SetPasswordPage />} />
       <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="horses" element={<ProtectedRoute staffOnly><HorsesPage /></ProtectedRoute>} />
+        <Route path="horses" element={<HorsesPage />} />
         <Route path="tasks" element={<ProtectedRoute staffOnly><TasksPage /></ProtectedRoute>} />
         <Route path="bookings" element={<BookingsPage />} />
         <Route path="transport" element={<ProtectedRoute staffOnly><TransportPage /></ProtectedRoute>} />
         <Route path="announcements" element={<AnnouncementsPage />} />
         <Route path="users" element={<ProtectedRoute staffOnly><UsersPage /></ProtectedRoute>} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="schedule" element={<SchedulePage />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
       <Route path="*" element={<Navigate to={user ? '/app/dashboard' : '/'} replace />} />

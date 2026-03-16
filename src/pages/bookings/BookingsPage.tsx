@@ -18,14 +18,16 @@ const statusConfig: Record<RequestStatus, { color: 'warning' | 'success' | 'dang
 };
 
 export default function BookingsPage() {
-  const { user, isStaff } = useAuth();
+  const { user, isStaff, isRole } = useAuth();
   const { t } = useLang();
   const [filter, setFilter] = useState<string>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [reviewModal, setReviewModal] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
-  const [form, setForm] = useState({ title: '', description: '', facilityType: 'arena', requestedDate: '' });
+  const [form, setForm] = useState({ title: '', description: '', facilityType: 'arena', requestedDate: '', requestedTime: '', requestedEndTime: '' });
   const [tick, setTick] = useState(0);
+
+  const isAdmin = isRole('admin');
 
   const requests = useMemo(() => {
     let list = isStaff ? api.getRequests() : api.getRequestsByClient(user!.id);
@@ -35,12 +37,42 @@ export default function BookingsPage() {
 
   const submitRequest = () => {
     if (!form.title || !form.description) return;
-    api.createRequest({ ...form, clientId: user!.id, clientName: user!.name, status: 'pending', createdAt: new Date().toISOString().split('T')[0] });
-    setModalOpen(false); setForm({ title: '', description: '', facilityType: 'arena', requestedDate: '' }); setTick((x) => x + 1);
+    const newReq = api.createRequest({
+      ...form,
+      clientId: user!.id,
+      clientName: user!.name,
+      status: 'pending',
+      createdAt: new Date().toISOString().split('T')[0],
+    });
+    // Notification for staff with sourceId for quick actions
+    api.addNotification({
+      type: 'request',
+      title: t.bookings.newRequest,
+      message: `${user!.name}: ${form.title}`,
+      read: false,
+      createdAt: new Date().toISOString(),
+      link: '/app/bookings',
+      audience: 'staff',
+      sourceId: newReq.id,
+    });
+    setModalOpen(false); setForm({ title: '', description: '', facilityType: 'arena', requestedDate: '', requestedTime: '', requestedEndTime: '' }); setTick((x) => x + 1);
   };
 
   const reviewRequest = (id: string, status: RequestStatus) => {
     api.updateRequest(id, { status, adminNotes: adminNotes || undefined });
+    // Notify client
+    const req = requests.find((r) => r.id === id);
+    if (req) {
+      api.addNotification({
+        type: 'request',
+        title: status === 'approved' ? t.common.approved : t.common.rejected,
+        message: `${req.title}: ${status}`,
+        read: false,
+        createdAt: new Date().toISOString(),
+        link: '/app/bookings',
+        targetUserId: req.clientId,
+      });
+    }
     setReviewModal(null); setAdminNotes(''); setTick((x) => x + 1);
   };
 
@@ -81,6 +113,12 @@ export default function BookingsPage() {
                           {isStaff && <span>{t.dashboard.from}: {r.clientName}</span>}
                           {r.facilityType && <span>{t.bookings.facility}: {r.facilityType}</span>}
                           {r.requestedDate && <span>{t.bookings.requestedDate}: {format(parseISO(r.requestedDate), 'MMM d, yyyy')}</span>}
+                          {r.requestedTime && (
+                            <span className="inline-flex items-center gap-1">
+                              <Clock size={10} />
+                              {r.requestedTime}{r.requestedEndTime && ` - ${r.requestedEndTime}`}
+                            </span>
+                          )}
                           <span>{t.bookings.submitted}: {format(parseISO(r.createdAt), 'MMM d, yyyy')}</span>
                         </div>
                         {r.adminNotes && <div className="mt-3 p-3 rounded-lg bg-stone-50 text-xs text-stone-600"><span className="font-medium">{t.bookings.adminNotes}:</span> {r.adminNotes}</div>}
@@ -100,10 +138,12 @@ export default function BookingsPage() {
           <div className="space-y-4">
             <Input label={t.bookings.requestTitle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t.bookings.requestTitlePlaceholder} required />
             <Textarea label={t.tasks.description} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t.bookings.descriptionPlaceholder} required />
+            <Select label={t.bookings.facility} value={form.facilityType} onChange={(e) => setForm({ ...form, facilityType: e.target.value })}
+              options={[{ value: 'arena', label: t.bookings.arena }, { value: 'paddock', label: t.bookings.paddockFacility }, { value: 'round-pen', label: t.bookings.roundPen }, { value: 'other', label: t.bookings.other }]} />
+            <Input label={t.bookings.requestedDate} type="date" value={form.requestedDate} onChange={(e) => setForm({ ...form, requestedDate: e.target.value })} />
             <div className="grid grid-cols-2 gap-4">
-              <Select label={t.bookings.facility} value={form.facilityType} onChange={(e) => setForm({ ...form, facilityType: e.target.value })}
-                options={[{ value: 'arena', label: t.bookings.arena }, { value: 'paddock', label: t.bookings.paddockFacility }, { value: 'round-pen', label: t.bookings.roundPen }, { value: 'other', label: t.bookings.other }]} />
-              <Input label={t.bookings.requestedDate} type="date" value={form.requestedDate} onChange={(e) => setForm({ ...form, requestedDate: e.target.value })} />
+              <Input label={t.bookings.startTime} type="time" value={form.requestedTime} onChange={(e) => setForm({ ...form, requestedTime: e.target.value })} />
+              <Input label={t.bookings.endTime} type="time" value={form.requestedEndTime} onChange={(e) => setForm({ ...form, requestedEndTime: e.target.value })} />
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
@@ -118,7 +158,12 @@ export default function BookingsPage() {
               <div>
                 <h3 className="text-sm font-semibold text-stone-900">{reviewing.title}</h3>
                 <p className="text-sm text-stone-600 mt-1">{reviewing.description}</p>
-                <p className="text-xs text-stone-400 mt-2">{t.dashboard.from}: {reviewing.clientName} {reviewing.requestedDate && ` · ${format(parseISO(reviewing.requestedDate), 'MMM d, yyyy')}`}</p>
+                <p className="text-xs text-stone-400 mt-2">
+                  {t.dashboard.from}: {reviewing.clientName}
+                  {reviewing.requestedDate && ` · ${format(parseISO(reviewing.requestedDate), 'MMM d, yyyy')}`}
+                  {reviewing.requestedTime && ` · ${reviewing.requestedTime}`}
+                  {reviewing.requestedEndTime && ` - ${reviewing.requestedEndTime}`}
+                </p>
               </div>
               <Textarea label={t.bookings.adminNotes} value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} placeholder={t.bookings.adminNotesPlaceholder} />
               <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
