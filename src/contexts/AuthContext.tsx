@@ -14,8 +14,16 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
+    // Restore session: stored as { email, id } reference, rehydrate from Supabase cache
     const stored = localStorage.getItem('horse_hotel_auth');
-    if (stored) { try { return JSON.parse(stored); } catch { /* */ } }
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const fresh = api.getUserByEmail(parsed.email);
+        if (fresh && fresh.status === 'active') return fresh;
+        localStorage.removeItem('horse_hotel_auth');
+      } catch { /* */ }
+    }
     return null;
   });
 
@@ -26,7 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (found.password !== password) return { success: false, error: 'invalid' };
     if (found.status === 'pending') return { success: false, error: 'pending' };
     setUser(found);
-    localStorage.setItem('horse_hotel_auth', JSON.stringify(found));
+    // Store only email/id reference (not full user with password)
+    localStorage.setItem('horse_hotel_auth', JSON.stringify({ email: found.email, id: found.id }));
     return { success: true };
   }, []);
 

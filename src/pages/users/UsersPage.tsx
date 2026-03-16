@@ -211,7 +211,7 @@ export default function UsersPage() {
                     </div>
                   )}
                   {/* Admin actions: change role & delete */}
-                  {isAdmin && u.id !== 'u1' && (
+                  {isAdmin && u.email !== 'admin@admin.com' && (
                     <div className="mt-3 pt-2 border-t border-stone-100 space-y-2">
                       {editRoleUser === u.id ? (
                         <div className="flex items-center gap-2">

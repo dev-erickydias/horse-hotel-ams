@@ -2,117 +2,194 @@ import type {
   User, Horse, Task, ClientRequest, Announcement, Transport, Notification, ScheduleEvent,
 } from '../types';
 import { sanitizeObject } from '../utils/sanitize';
+import { supabase } from './supabase';
 
-let _idCounter = Date.now();
-function genId(): string { return (++_idCounter).toString(36); }
+// ── Table names ─────────────────────────────────────────────
+const T = {
+  users: 'horse_hotel_users',
+  horses: 'horse_hotel_horses',
+  tasks: 'horse_hotel_tasks',
+  requests: 'horse_hotel_requests',
+  announcements: 'horse_hotel_announcements',
+  transports: 'horse_hotel_transports',
+  notifications: 'horse_hotel_notifications',
+} as const;
 
-const today = () => new Date().toISOString().split('T')[0];
-const daysFromNow = (n: number) => {
-  const d = new Date(); d.setDate(d.getDate() + n);
-  return d.toISOString().split('T')[0];
-};
+// ── Snake ↔ Camel conversion ────────────────────────────────
+function snakeToCamel(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const camelKey = key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+    result[camelKey] = value;
+  }
+  return result;
+}
 
-const SEED_USERS: User[] = [
-  { id: 'u1', email: 'admin@admin.com', name: 'Admin', role: 'admin', status: 'active', phone: '+00 000 0000', password: 'admin', createdAt: '2024-01-01' },
-];
+function camelToSnake(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) continue;
+    const snakeKey = key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+    result[snakeKey] = value;
+  }
+  return result;
+}
 
-const SEED_HORSES: Horse[] = [
-  { id: 'h1', name: 'Storm', passportId: 'XX-000001', motherName: 'Breeze', ownerId: 'u1', ownerName: 'Admin', checkIn: daysFromNow(-5), checkOut: daysFromNow(10), stableType: 'shavings', stableLocation: 'stable-a', walkerSchedule: true, paddockSchedule: true, quarantine: false, status: 'checked-in', notes: 'Prefers morning paddock time' },
-  { id: 'h2', name: 'Luna', passportId: 'XX-000002', motherName: 'Star', ownerId: 'u1', ownerName: 'Admin', checkIn: daysFromNow(-2), checkOut: daysFromNow(5), stableType: 'straw', stableLocation: 'pension-left', walkerSchedule: false, paddockSchedule: true, quarantine: true, quarantineStart: daysFromNow(-2), quarantineEnd: daysFromNow(5), status: 'checked-in', notes: 'In quarantine' },
-  { id: 'h3', name: 'Thunder', passportId: 'XX-000003', motherName: 'Lightning', ownerId: 'u1', ownerName: 'Admin', checkIn: daysFromNow(1), checkOut: daysFromNow(14), stableType: 'shavings', stableLocation: 'stable-b', walkerSchedule: true, paddockSchedule: false, quarantine: false, status: 'upcoming', transportDestination: 'Destination City' },
-];
-
-const SEED_TASKS: Task[] = [
-  { id: 't1', title: 'Prepare box for Thunder', description: 'Set up shavings box in stable B for Thunder arriving tomorrow.', horseId: 'h3', horseName: 'Thunder', assignedTo: 'u1', assignedToName: 'Admin', dueDate: daysFromNow(1), completed: false, priority: 'high', createdAt: today(), createdBy: 'u1' },
-  { id: 't2', title: 'Luna quarantine check', description: 'Daily quarantine health check for Luna.', horseId: 'h2', horseName: 'Luna', assignedTo: 'u1', assignedToName: 'Admin', dueDate: today(), completed: false, priority: 'urgent', createdAt: today(), createdBy: 'u1' },
-];
-
-const SEED_ANNOUNCEMENTS: Announcement[] = [
-  { id: 'a1', title: 'Welcome to the new system', content: 'We are excited to launch our new horse hotel management platform.', category: 'general', audience: 'all', authorId: 'u1', authorName: 'Admin', pinned: true, createdAt: daysFromNow(-1) },
-];
-
-const STORAGE_KEY = 'horse_hotel_data_v4';
-
+// ── In-memory state (cache) ─────────────────────────────────
 interface AppState {
   users: User[]; horses: Horse[]; tasks: Task[]; requests: ClientRequest[];
   announcements: Announcement[]; transports: Transport[]; notifications: Notification[];
 }
 
-function getInitialState(): AppState {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) { try { return JSON.parse(stored); } catch { /* */ } }
-  return { users: SEED_USERS, horses: SEED_HORSES, tasks: SEED_TASKS, requests: [], announcements: SEED_ANNOUNCEMENTS, transports: [], notifications: [
-    { id: 'n1', type: 'arrival', title: 'New Arrival Tomorrow', message: 'Thunder is arriving tomorrow.', read: false, createdAt: today(), link: '/app/horses', audience: 'staff' },
-  ]};
+let state: AppState = {
+  users: [], horses: [], tasks: [], requests: [],
+  announcements: [], transports: [], notifications: [],
+};
+
+let _initialized = false;
+let _initPromise: Promise<void> | null = null;
+
+// ── Initialize: fetch all from Supabase ─────────────────────
+export async function initializeData(): Promise<void> {
+  if (_initialized) return;
+  if (_initPromise) return _initPromise;
+
+  _initPromise = (async () => {
+    try {
+      const [users, horses, tasks, requests, announcements, transports, notifications] = await Promise.all([
+        supabase.from(T.users).select('*').order('created_at', { ascending: false }),
+        supabase.from(T.horses).select('*').order('created_at', { ascending: false }),
+        supabase.from(T.tasks).select('*').order('created_at', { ascending: false }),
+        supabase.from(T.requests).select('*').order('created_at', { ascending: false }),
+        supabase.from(T.announcements).select('*').order('created_at', { ascending: false }),
+        supabase.from(T.transports).select('*').order('created_at', { ascending: false }),
+        supabase.from(T.notifications).select('*').order('created_at', { ascending: false }),
+      ]);
+
+      state.users = (users.data || []).map((r) => snakeToCamel(r) as unknown as User);
+      state.horses = (horses.data || []).map((r) => snakeToCamel(r) as unknown as Horse);
+      state.tasks = (tasks.data || []).map((r) => snakeToCamel(r) as unknown as Task);
+      state.requests = (requests.data || []).map((r) => snakeToCamel(r) as unknown as ClientRequest);
+      state.announcements = (announcements.data || []).map((r) => snakeToCamel(r) as unknown as Announcement);
+      state.transports = (transports.data || []).map((r) => snakeToCamel(r) as unknown as Transport);
+      state.notifications = (notifications.data || []).map((r) => snakeToCamel(r) as unknown as Notification);
+
+      _initialized = true;
+    } catch (err) {
+      console.error('Failed to initialize data from Supabase:', err);
+      _initialized = true; // still mark as initialized so app doesn't hang
+    }
+  })();
+
+  return _initPromise;
 }
 
-let state: AppState = getInitialState();
-function persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-
-export function resetData() {
-  localStorage.removeItem(STORAGE_KEY);
-  state = getInitialState();
-  persist();
+export function isDataReady(): boolean {
+  return _initialized;
 }
 
-function create<T extends { id: string }>(key: keyof AppState, item: Omit<T, 'id'>): T {
+// ── Async DB helpers (fire-and-forget) ──────────────────────
+function dbInsert(table: string, data: Record<string, unknown>) {
+  const snakeData = camelToSnake(data);
+  supabase.from(table).insert(snakeData).then(({ error }) => {
+    if (error) console.error(`[Supabase] Insert error on ${table}:`, error);
+  });
+}
+
+function dbUpdate(table: string, id: string, data: Record<string, unknown>) {
+  const snakeData = camelToSnake(data);
+  delete snakeData.id;
+  supabase.from(table).update(snakeData).eq('id', id).then(({ error }) => {
+    if (error) console.error(`[Supabase] Update error on ${table}:`, error);
+  });
+}
+
+function dbDelete(table: string, id: string) {
+  supabase.from(table).delete().eq('id', id).then(({ error }) => {
+    if (error) console.error(`[Supabase] Delete error on ${table}:`, error);
+  });
+}
+
+// ── Sync CRUD (cache-first, write-through to Supabase) ──────
+function create<T extends { id: string }>(key: keyof AppState, table: string, item: Omit<T, 'id'>): T {
   const sanitized = sanitizeObject(item);
-  const newItem = { ...sanitized, id: genId() } as T;
-  (state[key] as T[]).unshift(newItem); persist(); return newItem;
+  const id = crypto.randomUUID();
+  const newItem = { ...sanitized, id } as T;
+  (state[key] as T[]).unshift(newItem);
+  dbInsert(table, { ...sanitized, id });
+  return newItem;
 }
-function update<T extends { id: string }>(key: keyof AppState, id: string, updates: Partial<T>): T | undefined {
+
+function update<T extends { id: string }>(key: keyof AppState, table: string, id: string, updates: Partial<T>): T | undefined {
   const arr = state[key] as T[];
   const idx = arr.findIndex((item) => item.id === id);
   if (idx === -1) return undefined;
   const sanitized = sanitizeObject(updates);
-  arr[idx] = { ...arr[idx], ...sanitized }; persist(); return arr[idx];
-}
-function remove(key: keyof AppState, id: string): boolean {
-  const arr = state[key] as { id: string }[];
-  const idx = arr.findIndex((item) => item.id === id);
-  if (idx === -1) return false; arr.splice(idx, 1); persist(); return true;
+  arr[idx] = { ...arr[idx], ...sanitized };
+  dbUpdate(table, id, sanitized as Record<string, unknown>);
+  return arr[idx];
 }
 
+function remove(key: keyof AppState, table: string, id: string): boolean {
+  const arr = state[key] as { id: string }[];
+  const idx = arr.findIndex((item) => item.id === id);
+  if (idx === -1) return false;
+  arr.splice(idx, 1);
+  dbDelete(table, id);
+  return true;
+}
+
+// ── Reset: clear Supabase data (dangerous) ──────────────────
+export function resetData() {
+  // Clear all tables in Supabase
+  Object.values(T).forEach((table) => {
+    supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000').then(() => {});
+  });
+  state = { users: [], horses: [], tasks: [], requests: [], announcements: [], transports: [], notifications: [] };
+}
+
+// ── Public API ──────────────────────────────────────────────
 export const api = {
+  // ── Users ──
   getUsers: () => [...state.users],
   getUser: (id: string) => state.users.find((u) => u.id === id),
   getUserByEmail: (email: string) => state.users.find((u) => u.email === email),
   getUserByToken: (token: string) => state.users.find((u) => u.inviteToken === token),
-  createUser: (u: Omit<User, 'id'>) => create<User>('users', u),
-  updateUser: (id: string, u: Partial<User>) => update<User>('users', id, u),
-  deleteUser: (id: string) => remove('users', id),
+  createUser: (u: Omit<User, 'id'>) => create<User>('users', T.users, u),
+  updateUser: (id: string, u: Partial<User>) => update<User>('users', T.users, id, u),
+  deleteUser: (id: string) => remove('users', T.users, id),
 
+  // ── Horses ──
   getHorses: () => [...state.horses],
   getHorse: (id: string) => state.horses.find((h) => h.id === id),
   getHorsesByOwner: (ownerId: string) => state.horses.filter((h) => h.ownerId === ownerId),
-  createHorse: (h: Omit<Horse, 'id'>) => create<Horse>('horses', h),
-  updateHorse: (id: string, h: Partial<Horse>) => update<Horse>('horses', id, h),
-  deleteHorse: (id: string) => remove('horses', id),
+  createHorse: (h: Omit<Horse, 'id'>) => create<Horse>('horses', T.horses, h),
+  updateHorse: (id: string, h: Partial<Horse>) => update<Horse>('horses', T.horses, id, h),
+  deleteHorse: (id: string) => remove('horses', T.horses, id),
 
+  // ── Tasks ──
   getTasks: () => [...state.tasks],
-  createTask: (t: Omit<Task, 'id'>) => create<Task>('tasks', t),
-  updateTask: (id: string, t: Partial<Task>) => update<Task>('tasks', id, t),
-  deleteTask: (id: string) => remove('tasks', id),
+  createTask: (t: Omit<Task, 'id'>) => create<Task>('tasks', T.tasks, t),
+  updateTask: (id: string, t: Partial<Task>) => update<Task>('tasks', T.tasks, id, t),
+  deleteTask: (id: string) => remove('tasks', T.tasks, id),
 
+  // ── Client Requests ──
   getRequests: () => [...state.requests],
   getRequestsByClient: (clientId: string) => state.requests.filter((r) => r.clientId === clientId),
-  createRequest: (r: Omit<ClientRequest, 'id'>) => create<ClientRequest>('requests', r),
-  updateRequest: (id: string, r: Partial<ClientRequest>) => update<ClientRequest>('requests', id, r),
+  createRequest: (r: Omit<ClientRequest, 'id'>) => create<ClientRequest>('requests', T.requests, r),
+  updateRequest: (id: string, r: Partial<ClientRequest>) => update<ClientRequest>('requests', T.requests, id, r),
 
+  // ── Announcements ──
   getAnnouncements: () => [...state.announcements],
   getAnnouncementsForRole: (role: string) => {
     // Auto-purge archived announcements older than 10 days
     const tenDaysAgo = new Date(); tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
     const tenDaysAgoStr = tenDaysAgo.toISOString();
-    const before = state.announcements.length;
-    state.announcements = state.announcements.filter((a) => {
-      if (a.archived && a.archivedAt && a.archivedAt < tenDaysAgoStr) return false;
-      return true;
-    });
-    if (state.announcements.length !== before) persist();
+    const toDelete = state.announcements.filter((a) => a.archived && a.archivedAt && a.archivedAt < tenDaysAgoStr);
+    toDelete.forEach((a) => remove('announcements', T.announcements, a.id));
 
     return state.announcements.filter((a) => {
-      if (a.archived) return false; // hide archived from normal view
+      if (a.archived) return false;
       if (!a.audience || a.audience === 'all') return true;
       if (a.audience === 'staff' && (role === 'admin' || role === 'worker')) return true;
       if (a.audience === 'clients' && role === 'client') return true;
@@ -120,42 +197,46 @@ export const api = {
     });
   },
   getArchivedAnnouncements: () => {
-    // Auto-purge archived announcements older than 10 days
     const tenDaysAgo = new Date(); tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
     const tenDaysAgoStr = tenDaysAgo.toISOString();
-    state.announcements = state.announcements.filter((a) => {
-      if (a.archived && a.archivedAt && a.archivedAt < tenDaysAgoStr) return false;
-      return true;
-    });
+    const toDelete = state.announcements.filter((a) => a.archived && a.archivedAt && a.archivedAt < tenDaysAgoStr);
+    toDelete.forEach((a) => remove('announcements', T.announcements, a.id));
     return state.announcements.filter((a) => a.archived);
   },
-  archiveAnnouncement: (id: string) => update<Announcement>('announcements', id, { archived: true, archivedAt: new Date().toISOString() }),
-  restoreAnnouncement: (id: string) => update<Announcement>('announcements', id, { archived: false, archivedAt: undefined }),
-  createAnnouncement: (a: Omit<Announcement, 'id'>) => create<Announcement>('announcements', a),
-  updateAnnouncement: (id: string, a: Partial<Announcement>) => update<Announcement>('announcements', id, a),
-  deleteAnnouncement: (id: string) => remove('announcements', id),
+  archiveAnnouncement: (id: string) => update<Announcement>('announcements', T.announcements, id, { archived: true, archivedAt: new Date().toISOString() }),
+  restoreAnnouncement: (id: string) => update<Announcement>('announcements', T.announcements, id, { archived: false, archivedAt: undefined }),
+  createAnnouncement: (a: Omit<Announcement, 'id'>) => create<Announcement>('announcements', T.announcements, a),
+  updateAnnouncement: (id: string, a: Partial<Announcement>) => update<Announcement>('announcements', T.announcements, id, a),
+  deleteAnnouncement: (id: string) => remove('announcements', T.announcements, id),
 
+  // ── Transports ──
   getTransports: () => [...state.transports],
-  createTransport: (t: Omit<Transport, 'id'>) => create<Transport>('transports', t),
-  updateTransport: (id: string, t: Partial<Transport>) => update<Transport>('transports', id, t),
+  createTransport: (t: Omit<Transport, 'id'>) => create<Transport>('transports', T.transports, t),
+  updateTransport: (id: string, t: Partial<Transport>) => update<Transport>('transports', T.transports, id, t),
 
+  // ── Notifications ──
   getNotifications: () => [...state.notifications],
   getNotificationsForUser: (userId: string, role: string) => {
     return state.notifications.filter((n) => {
-      // If targeted to a specific user
       if (n.targetUserId) return n.targetUserId === userId;
-      // Filter by audience
       if (!n.audience || n.audience === 'all') return true;
       if (n.audience === 'staff' && (role === 'admin' || role === 'worker')) return true;
       if (n.audience === 'clients' && role === 'client') return true;
       return false;
     });
   },
-  markNotificationRead: (id: string) => update<Notification>('notifications', id, { read: true }),
-  markAllRead: () => { state.notifications.forEach((n) => (n.read = true)); persist(); },
-  addNotification: (n: Omit<Notification, 'id'>) => create<Notification>('notifications', n),
+  markNotificationRead: (id: string) => update<Notification>('notifications', T.notifications, id, { read: true }),
+  markAllRead: () => {
+    state.notifications.forEach((n) => {
+      if (!n.read) {
+        n.read = true;
+        dbUpdate(T.notifications, n.id, { read: true });
+      }
+    });
+  },
+  addNotification: (n: Omit<Notification, 'id'>) => create<Notification>('notifications', T.notifications, n),
 
-  // Schedule: build from transports, requests, and horse check-ins/outs
+  // ── Schedule Events (computed from other tables) ──
   getScheduleEvents: (): ScheduleEvent[] => {
     const events: ScheduleEvent[] = [];
 
