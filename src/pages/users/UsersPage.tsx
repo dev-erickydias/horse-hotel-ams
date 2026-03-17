@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { Input, Select } from '../../components/ui/Input';
 import type { Role } from '../../types';
+import { MASTER_ADMIN_EMAIL } from '../../config/constants';
 import { Plus, Mail, Phone, UserCheck, UserX, Clock, Trash2, UserPlus, Search, Slack, Shield } from 'lucide-react';
 
 const roleColors = { admin: 'danger', worker: 'info', client: 'success' } as const;
@@ -24,7 +25,7 @@ export default function UsersPage() {
   const [editRoleValue, setEditRoleValue] = useState<Role>('client');
   const [search, setSearch] = useState('');
   const [tick, setTick] = useState(0);
-  const allUsers = (() => { void tick; return api.getUsers(); })();
+  const allUsers = (() => { void tick; return api.getUsers().filter((u) => u.email !== MASTER_ADMIN_EMAIL); })();
   const allHorses = (() => { void tick; return api.getHorses(); })();
   const pendingUsers = allUsers.filter((u) => u.status === 'pending');
   const isAdmin = isRole('admin');
@@ -211,7 +212,7 @@ export default function UsersPage() {
                     </div>
                   )}
                   {/* Admin actions: change role & delete */}
-                  {isAdmin && u.email !== 'admin@admin.com' && (
+                  {isAdmin && u.email !== MASTER_ADMIN_EMAIL && (
                     <div className="mt-3 pt-2 border-t border-stone-100 space-y-2">
                       {editRoleUser === u.id ? (
                         <div className="flex items-center gap-2">
