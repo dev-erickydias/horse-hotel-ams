@@ -56,13 +56,13 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <LangProvider>
-          <DataProvider>
+        <DataProvider>
+          <LangProvider>
             <AuthProvider>
               <AppRoutes />
             </AuthProvider>
-          </DataProvider>
-        </LangProvider>
+          </LangProvider>
+        </DataProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

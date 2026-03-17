@@ -62,7 +62,7 @@ export async function initializeData(): Promise<void> {
         return;
       }
 
-      const [users, horses, tasks, requests, announcements, transports, notifications] = await Promise.all([
+      const results = await Promise.all([
         supabase.from(T.users).select('*').order('created_at', { ascending: false }),
         supabase.from(T.horses).select('*').order('created_at', { ascending: false }),
         supabase.from(T.tasks).select('*').order('created_at', { ascending: false }),
@@ -72,6 +72,13 @@ export async function initializeData(): Promise<void> {
         supabase.from(T.notifications).select('*').order('created_at', { ascending: false }),
       ]);
 
+      const [users, horses, tasks, requests, announcements, transports, notifications] = results;
+
+      // Log any Supabase errors
+      results.forEach((r, i) => {
+        if (r.error) console.error(`[Supabase] Error loading table ${Object.values(T)[i]}:`, r.error);
+      });
+
       state.users = (users.data || []).map((r) => snakeToCamel(r) as unknown as User);
       state.horses = (horses.data || []).map((r) => snakeToCamel(r) as unknown as Horse);
       state.tasks = (tasks.data || []).map((r) => snakeToCamel(r) as unknown as Task);
@@ -79,6 +86,8 @@ export async function initializeData(): Promise<void> {
       state.announcements = (announcements.data || []).map((r) => snakeToCamel(r) as unknown as Announcement);
       state.transports = (transports.data || []).map((r) => snakeToCamel(r) as unknown as Transport);
       state.notifications = (notifications.data || []).map((r) => snakeToCamel(r) as unknown as Notification);
+
+      console.info(`[DataInit] Loaded ${state.users.length} users, ${state.horses.length} horses, ${state.tasks.length} tasks`);
 
       _initialized = true;
     } catch (err) {
