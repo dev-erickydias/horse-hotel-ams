@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { type Lang, type Translations, getTranslations } from '../i18n';
+import { api } from '../services/data';
 
 interface LangContextType {
   lang: Lang;
@@ -7,20 +8,44 @@ interface LangContextType {
   t: Translations;
 }
 
-const STORAGE_KEY = 'horse_hotel_lang';
-
 const LangContext = createContext<LangContextType | null>(null);
 
+/** Detect language from browser navigator */
+function detectBrowserLang(): Lang {
+  const nav = navigator.language?.toLowerCase() || '';
+  if (nav.startsWith('pt')) return 'pt';
+  if (nav.startsWith('nl')) return 'nl';
+  return 'en';
+}
+
+/** Read lang from the logged-in user cookie session */
+function getInitialLang(): Lang {
+  // Try to get from cookie session → user profile
+  const match = document.cookie.match(/(?:^|; )hh_session=([^;]*)/);
+  if (match) {
+    const token = decodeURIComponent(match[1]);
+    const user = api.getUserBySessionToken(token);
+    if (user?.lang && (user.lang === 'en' || user.lang === 'pt' || user.lang === 'nl')) {
+      return user.lang as Lang;
+    }
+  }
+  return detectBrowserLang();
+}
+
 export function LangProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'en' || stored === 'pt' || stored === 'nl') return stored;
-    return 'en';
-  });
+  const [lang, setLangState] = useState<Lang>(getInitialLang);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
-    localStorage.setItem(STORAGE_KEY, l);
+    // Save to logged-in user profile in Supabase
+    const match = document.cookie.match(/(?:^|; )hh_session=([^;]*)/);
+    if (match) {
+      const token = decodeURIComponent(match[1]);
+      const user = api.getUserBySessionToken(token);
+      if (user) {
+        api.updateUser(user.id, { lang: l });
+      }
+    }
   }, []);
 
   const t = getTranslations(lang);

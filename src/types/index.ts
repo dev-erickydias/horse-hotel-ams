@@ -2,6 +2,8 @@
 export type Role = 'admin' | 'worker' | 'client';
 export type UserStatus = 'pending' | 'active';
 
+export type Lang = 'en' | 'pt' | 'nl';
+
 export interface User {
   id: string;
   email: string;
@@ -12,6 +14,8 @@ export interface User {
   phone?: string;
   password?: string;
   inviteToken?: string;
+  sessionToken?: string;
+  lang?: Lang;
   createdAt: string;
 }
 

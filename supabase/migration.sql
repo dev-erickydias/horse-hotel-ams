@@ -55,6 +55,8 @@ CREATE TABLE public.horse_hotel_users (
   avatar text,
   password text,
   invite_token text,
+  session_token text,
+  lang text DEFAULT 'en',
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
