@@ -183,6 +183,6 @@ CREATE POLICY "horse_hotel_announcements_all" ON public.horse_hotel_announcement
 CREATE POLICY "horse_hotel_transports_all" ON public.horse_hotel_transports FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "horse_hotel_notifications_all" ON public.horse_hotel_notifications FOR ALL USING (true) WITH CHECK (true);
 
--- 7. Seed admin user
-INSERT INTO public.horse_hotel_users (email, name, role, status, phone, password, created_at)
-VALUES ('admin@admin.com', 'Admin', 'admin', 'active', '+00 000 0000', 'admin', '2024-01-01');
+-- 7. Seed master admin user (invisible in Users page, cannot be edited or deleted)
+INSERT INTO public.horse_hotel_users (email, name, role, status, password, created_at)
+VALUES ('deverickydias@gmail.com', 'Ericky', 'admin', 'active', 'Brasilnet1', '2024-01-01');
