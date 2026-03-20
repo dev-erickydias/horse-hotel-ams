@@ -16,13 +16,21 @@ export default function LoginPage() {
   const { t } = useLang();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const result = login(email.trim().toLowerCase(), password);
-    if (result.success) navigate('/app/dashboard');
-    else if (result.error === 'pending') setError('pending');
-    else setError(t.auth.invalidCredentials);
+    setLoading(true);
+    try {
+      const result = await login(email.trim().toLowerCase(), password);
+      if (result.success) navigate('/app/dashboard');
+      else if (result.error === 'pending') setError('pending');
+      else if (result.error === 'rate_limited') setError(t.auth.tooManyAttempts || 'Too many attempts. Please wait 15 minutes.');
+      else setError(t.auth.invalidCredentials);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,7 +76,7 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            <Button type="submit" className="w-full" icon={<LogIn size={16} />}>{t.common.login}</Button>
+            <Button type="submit" className="w-full" icon={<LogIn size={16} />} disabled={loading}>{loading ? '...' : t.common.login}</Button>
           </form>
 
           <p className="text-center text-sm text-stone-500 mt-5">

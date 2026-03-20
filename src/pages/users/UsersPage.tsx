@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
 import { isValidEmail, sanitizePhone } from '../../utils/sanitize';
+import { hashPassword } from '../../utils/password';
 import Header from '../../components/layout/Header';
 import Card, { CardBody } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -73,26 +74,35 @@ export default function UsersPage() {
     setTick((x) => x + 1);
   };
 
-  const save = () => {
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
     if (!form.name.trim() || !form.email.trim() || !form.password) return;
     if (!isValidEmail(form.email.trim())) return;
     if (form.name.trim().length < 2 || form.name.length > 100) return;
-    if (form.password.length < 4) return;
+    if (form.password.length < 6) return;
     // Check for duplicate email
     if (api.getUserByEmail(form.email.trim().toLowerCase())) return;
-    api.createUser({
-      name: form.name.trim(),
-      email: form.email.trim().toLowerCase(),
-      role: form.role,
-      phone: form.phone ? sanitizePhone(form.phone) : undefined,
-      password: form.password,
-      status: 'active',
-      createdAt: new Date().toISOString().split('T')[0],
-    });
-    setModalOpen(false);
-    setForm({ name: '', email: '', role: 'worker', phone: '', password: '' });
-    setSearch('');
-    setTick((x) => x + 1);
+
+    setSaving(true);
+    try {
+      const hashedPw = await hashPassword(form.password);
+      api.createUser({
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        role: form.role,
+        phone: form.phone ? sanitizePhone(form.phone) : undefined,
+        password: hashedPw,
+        status: 'active',
+        createdAt: new Date().toISOString().split('T')[0],
+      });
+      setModalOpen(false);
+      setForm({ name: '', email: '', role: 'worker', phone: '', password: '' });
+      setSearch('');
+      setTick((x) => x + 1);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleChangeRole = (userId: string) => {

@@ -3,6 +3,7 @@ import type {
 } from '../types';
 import { sanitizeObject } from '../utils/sanitize';
 import { supabase, isSupabaseConfigured } from './supabase';
+import { MASTER_ADMIN_EMAIL } from '../config/constants';
 
 // ── Table names ─────────────────────────────────────────────
 const T = {
@@ -157,8 +158,13 @@ function remove(key: keyof AppState, table: string, id: string): boolean {
   return true;
 }
 
-// ── Reset: clear Supabase data (dangerous) ──────────────────
-export function resetData() {
+// ── Reset: clear Supabase data (dangerous — requires master admin) ──
+export function resetData(callerEmail: string) {
+  // Only the master admin can reset all data
+  if (callerEmail !== MASTER_ADMIN_EMAIL) {
+    console.error('[Security] Unauthorized resetData attempt by:', callerEmail);
+    return;
+  }
   // Clear all tables in Supabase
   Object.values(T).forEach((table) => {
     supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000').then(() => {});

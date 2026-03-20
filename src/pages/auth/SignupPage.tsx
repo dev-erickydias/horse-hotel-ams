@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
 import { isValidEmail, sanitizePhone } from '../../utils/sanitize';
+import { hashPassword } from '../../utils/password';
 import LangSwitcher from '../../components/ui/LangSwitcher';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -19,7 +20,9 @@ export default function SignupPage() {
   const [success, setSuccess] = useState(false);
   const { t } = useLang();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -35,7 +38,7 @@ export default function SignupPage() {
       return;
     }
 
-    if (password.length < 4) {
+    if (password.length < 6) {
       setError(t.auth.passwordTooShort);
       return;
     }
@@ -50,28 +53,36 @@ export default function SignupPage() {
       return;
     }
 
-    // Create user with 'pending' status
-    api.createUser({
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone ? sanitizePhone(phone) : undefined,
-      role: 'client', // Default role, admin will change
-      status: 'pending',
-      password,
-      createdAt: new Date().toISOString().split('T')[0],
-    });
+    setLoading(true);
+    try {
+      // Hash the password before storing
+      const hashedPw = await hashPassword(password);
 
-    // Add notification for admin
-    api.addNotification({
-      type: 'registration',
-      title: `New Registration: ${name}`,
-      message: `${name} (${email}) has registered and is waiting for approval.`,
-      read: false,
-      createdAt: new Date().toISOString(),
-      link: '/app/users',
-    });
+      // Create user with 'pending' status
+      api.createUser({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone ? sanitizePhone(phone) : undefined,
+        role: 'client', // Default role, admin will change
+        status: 'pending',
+        password: hashedPw,
+        createdAt: new Date().toISOString().split('T')[0],
+      });
 
-    setSuccess(true);
+      // Add notification for admin
+      api.addNotification({
+        type: 'registration',
+        title: `New Registration: ${name}`,
+        message: `${name} (${email}) has registered and is waiting for approval.`,
+        read: false,
+        createdAt: new Date().toISOString(),
+        link: '/app/users',
+      });
+
+      setSuccess(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -164,7 +175,7 @@ export default function SignupPage() {
               </button>
             </div>
             <Input label={t.auth.confirmPassword} type={showPassword ? 'text' : 'password'} placeholder={t.auth.confirmPlaceholder} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
-            <Button type="submit" className="w-full" icon={<UserPlus size={16} />}>{t.auth.signUpButton}</Button>
+            <Button type="submit" className="w-full" icon={<UserPlus size={16} />} disabled={loading}>{loading ? '...' : t.auth.signUpButton}</Button>
           </form>
 
           <p className="text-center text-sm text-stone-500 mt-5">

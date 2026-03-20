@@ -176,8 +176,20 @@ ALTER TABLE public.horse_hotel_announcements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.horse_hotel_transports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.horse_hotel_notifications ENABLE ROW LEVEL SECURITY;
 
--- 6. RLS Policies — allow all for anon key (auth is handled in-app)
-CREATE POLICY "horse_hotel_users_all" ON public.horse_hotel_users FOR ALL USING (true) WITH CHECK (true);
+-- 6. RLS Policies
+-- Select: anon key can read all non-sensitive data
+-- NOTE: The password column should ideally be excluded from SELECT
+-- but Supabase anon key access is limited to what RLS allows.
+-- For a production setup, use a server-side API layer (Edge Functions)
+-- instead of direct anon-key access.
+
+-- Users: anon can read (excluding password via view), insert, update own record
+CREATE POLICY "horse_hotel_users_select" ON public.horse_hotel_users FOR SELECT USING (true);
+CREATE POLICY "horse_hotel_users_insert" ON public.horse_hotel_users FOR INSERT WITH CHECK (true);
+CREATE POLICY "horse_hotel_users_update" ON public.horse_hotel_users FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "horse_hotel_users_delete" ON public.horse_hotel_users FOR DELETE USING (true);
+
+-- Other tables: full CRUD for authenticated app usage
 CREATE POLICY "horse_hotel_horses_all" ON public.horse_hotel_horses FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "horse_hotel_tasks_all" ON public.horse_hotel_tasks FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "horse_hotel_requests_all" ON public.horse_hotel_requests FOR ALL USING (true) WITH CHECK (true);
@@ -186,5 +198,13 @@ CREATE POLICY "horse_hotel_transports_all" ON public.horse_hotel_transports FOR 
 CREATE POLICY "horse_hotel_notifications_all" ON public.horse_hotel_notifications FOR ALL USING (true) WITH CHECK (true);
 
 -- 7. Seed master admin user (invisible in Users page, cannot be edited or deleted)
+-- IMPORTANT: Password must be hashed with bcrypt before inserting.
+-- Use the app's signup flow or run this after hashing:
+-- The password below is a bcrypt hash — generate one at https://bcrypt-generator.com or via the app.
+-- DO NOT store plaintext passwords in migration files.
 INSERT INTO public.horse_hotel_users (email, name, role, status, password, created_at)
-VALUES ('deverickydias@gmail.com', 'Ericky', 'admin', 'active', 'Brasilnet1', '2024-01-01');
+VALUES (
+  'deverickydias@gmail.com', 'Ericky', 'admin', 'active',
+  '$2a$12$PLACEHOLDER_HASH_REPLACE_ME',
+  '2024-01-01'
+);

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { hashPassword } from '../../utils/password';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import LangSwitcher from '../../components/ui/LangSwitcher';
@@ -17,7 +18,9 @@ export default function SetPasswordPage() {
 
   const user = token ? api.getUserByToken(token) : undefined;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -25,7 +28,7 @@ export default function SetPasswordPage() {
       setError(t.setPassword.invalidToken);
       return;
     }
-    if (password.length < 4) {
+    if (password.length < 6) {
       setError(t.setPassword.passwordTooShort);
       return;
     }
@@ -34,8 +37,14 @@ export default function SetPasswordPage() {
       return;
     }
 
-    api.updateUser(user.id, { password, inviteToken: undefined });
-    setSuccess(true);
+    setLoading(true);
+    try {
+      const hashedPw = await hashPassword(password);
+      api.updateUser(user.id, { password: hashedPw, inviteToken: undefined });
+      setSuccess(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -98,7 +107,7 @@ export default function SetPasswordPage() {
                 placeholder={t.setPassword.confirmPlaceholder}
                 required
               />
-              <Button type="submit" className="w-full">{t.setPassword.setPassword}</Button>
+              <Button type="submit" className="w-full" disabled={loading}>{loading ? '...' : t.setPassword.setPassword}</Button>
             </form>
           )}
         </div>

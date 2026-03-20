@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react';
 import type { User, Role } from '../types';
 import { api } from '../services/data';
+import { verifyPassword, isPlaintextPassword, hashPassword } from '../utils/password';
 
 // ── Cookie helpers (no localStorage) ─────────────────────
 function getCookie(name: string): string | null {
@@ -10,17 +11,34 @@ function getCookie(name: string): string | null {
 
 function setCookie(name: string, value: string, days = 30) {
   const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Strict; Secure`;
 }
 
 function deleteCookie(name: string) {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; Secure`;
+}
+
+// ── Secure session token (256-bit) ───────────────────────
+function generateSessionToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ── Rate limiting ────────────────────────────────────────
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+interface LoginAttempts {
+  count: number;
+  lastAttempt: number;
+  lockedUntil: number;
 }
 
 // ── Auth Context ─────────────────────────────────────────
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => { success: boolean; error?: string };
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isRole: (...roles: Role[]) => boolean;
   isStaff: boolean;
@@ -41,19 +59,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
-  const login = useCallback((email: string, password: string) => {
-    const found = api.getUserByEmail(email);
-    if (!found) return { success: false, error: 'invalid' };
-    if (!found.password) return { success: false, error: 'invalid' };
-    if (found.password !== password) return { success: false, error: 'invalid' };
+  const attemptsRef = useRef<Map<string, LoginAttempts>>(new Map());
+
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // ── Rate limit check ──
+    const now = Date.now();
+    const attempts = attemptsRef.current.get(normalizedEmail) || { count: 0, lastAttempt: 0, lockedUntil: 0 };
+
+    if (attempts.lockedUntil > now) {
+      const minutesLeft = Math.ceil((attempts.lockedUntil - now) / 60000);
+      return { success: false, error: 'rate_limited', };
+    }
+
+    // Reset count if last attempt was more than lockout period ago
+    if (now - attempts.lastAttempt > LOCKOUT_MS) {
+      attempts.count = 0;
+    }
+
+    // ── Credential verification ──
+    const found = api.getUserByEmail(normalizedEmail);
+    if (!found || !found.password) {
+      // Track failed attempt even for non-existent users (prevent enumeration)
+      attempts.count++;
+      attempts.lastAttempt = now;
+      if (attempts.count >= MAX_ATTEMPTS) {
+        attempts.lockedUntil = now + LOCKOUT_MS;
+      }
+      attemptsRef.current.set(normalizedEmail, attempts);
+      return { success: false, error: 'invalid' };
+    }
+
+    const passwordValid = await verifyPassword(password, found.password);
+    if (!passwordValid) {
+      attempts.count++;
+      attempts.lastAttempt = now;
+      if (attempts.count >= MAX_ATTEMPTS) {
+        attempts.lockedUntil = now + LOCKOUT_MS;
+      }
+      attemptsRef.current.set(normalizedEmail, attempts);
+      return { success: false, error: 'invalid' };
+    }
+
     if (found.status === 'pending') return { success: false, error: 'pending' };
 
-    // Generate session token, save to Supabase and cookie
-    const sessionToken = crypto.randomUUID();
+    // ── Migrate plaintext password to bcrypt on successful login ──
+    if (isPlaintextPassword(found.password)) {
+      const hashed = await hashPassword(password);
+      api.updateUser(found.id, { password: hashed });
+      found.password = hashed;
+    }
+
+    // ── Create session ──
+    const sessionToken = generateSessionToken();
     api.updateUser(found.id, { sessionToken });
     found.sessionToken = sessionToken;
     setUser(found);
     setCookie('hh_session', sessionToken);
+
+    // Reset failed attempts on success
+    attemptsRef.current.delete(normalizedEmail);
+
     return { success: true };
   }, []);
 

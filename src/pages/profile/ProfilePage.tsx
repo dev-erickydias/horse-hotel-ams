@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
 import { sanitizePhone } from '../../utils/sanitize';
+import { verifyPassword, hashPassword } from '../../utils/password';
 import Header from '../../components/layout/Header';
 import Card, { CardBody } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -59,17 +60,29 @@ export default function ProfilePage() {
     setTick((x) => x + 1);
   };
 
-  const changePassword = () => {
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const changePassword = async () => {
     setPwError(''); setPwSuccess('');
     if (!user) return;
     const fresh = api.getUser(user.id);
-    if (!fresh || fresh.password !== pwForm.current) { setPwError(t.profile.wrongCurrentPassword); return; }
-    if (pwForm.newPw.length < 4) { setPwError(t.profile.passwordTooShort); return; }
-    if (pwForm.newPw !== pwForm.confirm) { setPwError(t.profile.passwordMismatch); return; }
-    api.updateUser(user.id, { password: pwForm.newPw });
-    setPwForm({ current: '', newPw: '', confirm: '' });
-    setPwSuccess(t.profile.passwordChanged);
-    setTimeout(() => setPwSuccess(''), 3000);
+    if (!fresh || !fresh.password) { setPwError(t.profile.wrongCurrentPassword); return; }
+
+    setPwLoading(true);
+    try {
+      const valid = await verifyPassword(pwForm.current, fresh.password);
+      if (!valid) { setPwError(t.profile.wrongCurrentPassword); return; }
+      if (pwForm.newPw.length < 6) { setPwError(t.profile.passwordTooShort); return; }
+      if (pwForm.newPw !== pwForm.confirm) { setPwError(t.profile.passwordMismatch); return; }
+
+      const hashedPw = await hashPassword(pwForm.newPw);
+      api.updateUser(user.id, { password: hashedPw });
+      setPwForm({ current: '', newPw: '', confirm: '' });
+      setPwSuccess(t.profile.passwordChanged);
+      setTimeout(() => setPwSuccess(''), 3000);
+    } finally {
+      setPwLoading(false);
+    }
   };
 
   const openAddHorse = () => {
