@@ -180,12 +180,12 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-2xl shrink-0">
+                <div className="w-16 h-16 rounded-xl bg-gold-100 flex items-center justify-center text-forest-700 font-bold text-2xl shrink-0">
                   {(currentUser?.name || user?.name || '?').charAt(0)}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold text-stone-900">{currentUser?.name || user?.name}</h2>
+                    <h2 className="text-lg font-semibold text-stone-800">{currentUser?.name || user?.name}</h2>
                     <Badge variant={roleColors[user?.role || 'client']}>{roleLabels[user?.role || 'client']}</Badge>
                   </div>
                   <div className="flex items-center gap-1 text-sm text-stone-500"><Mail size={14} /> {currentUser?.email || user?.email}</div>
@@ -239,10 +239,10 @@ export default function ProfilePage() {
                   <CardBody className="space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 font-bold">{h.name.charAt(0)}</div>
+                        <div className="w-10 h-10 rounded-xl bg-gold-100 flex items-center justify-center text-forest-700 font-bold">{h.name.charAt(0)}</div>
                         <div>
-                          <h3 className="font-semibold text-stone-900 text-sm">{h.name}</h3>
-                          <p className="text-xs text-stone-500 font-mono bg-stone-100 px-1.5 py-0.5 rounded mt-0.5 inline-block">{h.passportId}</p>
+                          <h3 className="font-semibold text-stone-800 text-sm">{h.name}</h3>
+                          <p className="text-xs text-stone-500 font-mono bg-cream-200 px-1.5 py-0.5 rounded mt-0.5 inline-block">{h.passportId}</p>
                         </div>
                       </div>
                       <Badge variant={h.status === 'checked-in' ? 'success' : h.status === 'upcoming' ? 'info' : 'default'}>
@@ -263,13 +263,13 @@ export default function ProfilePage() {
                     </div>
 
                     {h.specialCare && (
-                      <div className="text-xs text-stone-500 bg-amber-50 border border-amber-100 rounded-lg p-2">
-                        <span className="font-semibold text-amber-700">{t.horses.specialCare}:</span> {h.specialCare}
+                      <div className="text-xs text-stone-500 bg-gold-50 border border-gold-100 rounded-lg p-2">
+                        <span className="font-semibold text-forest-700">{t.horses.specialCare}:</span> {h.specialCare}
                       </div>
                     )}
 
                     {(isClient || isWorker || isAdmin) && (
-                      <div className="pt-2 border-t border-stone-100">
+                      <div className="pt-2 border-t border-cream-200">
                         <Button size="sm" variant="secondary" icon={<Edit2 size={14} />} onClick={() => openEditHorse(h)}>{t.common.edit}</Button>
                       </div>
                     )}
@@ -295,7 +295,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Care & Feeding */}
-            <div className="pt-3 border-t border-stone-200">
+            <div className="pt-3 border-t border-cream-300">
               <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Leaf size={14} className="text-emerald-600" /> {t.profile.careInfo}
               </h4>
@@ -315,7 +315,7 @@ export default function ProfilePage() {
 
             <Textarea label={t.horses.notes} value={horseForm.notes} onChange={(e) => updH('notes', e.target.value)} />
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
+            <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
               <Button variant="secondary" onClick={() => setHorseModal(false)}>{t.common.cancel}</Button>
               <Button onClick={saveHorse}>{editingHorse ? t.common.save : t.profile.addHorse}</Button>
             </div>

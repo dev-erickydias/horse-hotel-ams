@@ -4,6 +4,10 @@ import type {
 import { sanitizeObject } from '../utils/sanitize';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { MASTER_ADMIN_EMAIL } from '../config/constants';
+import {
+  seedUsers, seedHorses, seedTasks, seedRequests,
+  seedAnnouncements, seedTransports, seedNotifications,
+} from './seed';
 
 // ── Table names ─────────────────────────────────────────────
 const T = {
@@ -58,7 +62,14 @@ export async function initializeData(): Promise<void> {
   _initPromise = (async () => {
     try {
       if (!isSupabaseConfigured) {
-        console.warn('Supabase not configured — running with empty state.');
+        console.warn('Supabase not configured — seeding demo data.');
+        state.users = [...seedUsers];
+        state.horses = [...seedHorses];
+        state.tasks = [...seedTasks];
+        state.requests = [...seedRequests];
+        state.announcements = [...seedAnnouncements];
+        state.transports = [...seedTransports];
+        state.notifications = [...seedNotifications];
         _initialized = true;
         return;
       }
@@ -89,6 +100,22 @@ export async function initializeData(): Promise<void> {
       state.notifications = (notifications.data || []).map((r) => snakeToCamel(r) as unknown as Notification);
 
       console.info(`[DataInit] Loaded ${state.users.length} users, ${state.horses.length} horses, ${state.tasks.length} tasks`);
+
+      // Seed demo data when content tables are empty (horses, tasks, etc.)
+      if (state.horses.length === 0 && state.tasks.length === 0 && state.transports.length === 0) {
+        console.info('[DataInit] No content data found — seeding demo data...');
+        // Merge seed users with existing DB users (avoid duplicates by email)
+        const existingEmails = new Set(state.users.map((u) => u.email));
+        const newSeedUsers = seedUsers.filter((u) => !existingEmails.has(u.email));
+        state.users = [...state.users, ...newSeedUsers];
+        state.horses = [...seedHorses];
+        state.tasks = [...seedTasks];
+        state.requests = [...seedRequests];
+        state.announcements = [...seedAnnouncements];
+        state.transports = [...seedTransports];
+        state.notifications = [...seedNotifications];
+        console.info('[DataInit] Demo data seeded successfully.');
+      }
 
       _initialized = true;
     } catch (err) {
@@ -179,6 +206,7 @@ export const api = {
   getUser: (id: string) => state.users.find((u) => u.id === id),
   getUserByEmail: (email: string) => state.users.find((u) => u.email === email),
   getUserByToken: (token: string) => state.users.find((u) => u.inviteToken === token),
+  getUserByResetToken: (token: string) => state.users.find((u) => u.resetToken === token),
   getUserBySessionToken: (token: string) => state.users.find((u) => u.sessionToken === token),
   createUser: (u: Omit<User, 'id'>) => create<User>('users', T.users, u),
   updateUser: (id: string, u: Partial<User>) => update<User>('users', T.users, id, u),

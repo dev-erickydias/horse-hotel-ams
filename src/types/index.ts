@@ -15,6 +15,8 @@ export interface User {
   password?: string;
   inviteToken?: string;
   sessionToken?: string;
+  resetToken?: string;
+  resetTokenExpiry?: string;
   lang?: Lang;
   createdAt: string;
 }

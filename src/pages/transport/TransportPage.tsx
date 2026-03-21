@@ -53,21 +53,21 @@ function UserAutocomplete({ value, onChange, placeholder, label }: {
           onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setShowDropdown(true); }}
           onFocus={() => setShowDropdown(true)}
           placeholder={placeholder}
-          className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none"
+          className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-cream-300 text-sm focus:border-forest-500 focus:ring-2 focus:ring-forest-500/20 outline-none"
         />
       </div>
       {showDropdown && filtered.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-stone-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-50 mt-1 w-full bg-white border border-cream-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
           {filtered.map((u) => (
             <button
               key={u.id}
               type="button"
-              className="w-full text-left px-3 py-2 hover:bg-amber-50 flex items-center gap-2 text-sm transition-colors"
+              className="w-full text-left px-3 py-2 hover:bg-gold-50 flex items-center gap-2 text-sm transition-colors"
               onClick={() => { setQuery(u.name); onChange(u.name, u.id); setShowDropdown(false); }}
             >
-              <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-xs shrink-0">{u.name.charAt(0)}</div>
+              <div className="w-7 h-7 rounded-full bg-gold-100 flex items-center justify-center text-forest-700 font-bold text-xs shrink-0">{u.name.charAt(0)}</div>
               <div className="flex-1 min-w-0">
-                <span className="font-medium text-stone-900">{u.name}</span>
+                <span className="font-medium text-stone-800">{u.name}</span>
                 <span className={`ml-2 text-xs ${roleColor(u.role)}`}>({roleLabel(u.role)})</span>
               </div>
             </button>
@@ -126,9 +126,9 @@ export default function TransportPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 font-bold">{tr.horseName.charAt(0)}</div>
+                        <div className="w-10 h-10 rounded-xl bg-gold-100 flex items-center justify-center text-forest-700 font-bold">{tr.horseName.charAt(0)}</div>
                         <div>
-                          <h3 className="text-sm font-semibold text-stone-900">{tr.horseName}</h3>
+                          <h3 className="text-sm font-semibold text-stone-800">{tr.horseName}</h3>
                           <p className="text-xs text-stone-400">
                             {format(parseISO(tr.transportDate), 'EEEE, MMM d, yyyy')}
                             {tr.transportTime && <span className="ml-1 inline-flex items-center gap-0.5"><Clock size={10} /> {tr.transportTime}</span>}
@@ -173,7 +173,7 @@ export default function TransportPage() {
               placeholder={t.transport.driverPlaceholder}
             />
             <Textarea label={t.transport.notes} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-            <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
+            <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
               <Button onClick={save}>{t.transport.schedule}</Button>
             </div>

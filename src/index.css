@@ -9,11 +9,14 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    @apply bg-stone-50 text-stone-900;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    @apply bg-cream-100 text-stone-800;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', Georgia, serif;
   }
   ::selection {
-    @apply bg-amber-200 text-amber-900;
+    @apply bg-gold-200 text-gold-900;
   }
   ::-webkit-scrollbar {
     width: 6px;
@@ -23,10 +26,10 @@
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-stone-300 rounded-full;
+    @apply bg-stone-300/60 rounded-full;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-stone-400;
+    @apply bg-stone-400/80;
   }
 }
 
@@ -37,12 +40,12 @@
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 
@@ -51,20 +54,171 @@
   to { opacity: 1; transform: translateX(0); }
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes gentle-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+
+@keyframes sway-slow {
+  0%, 100% { transform: rotate(-1.5deg) scaleY(1); }
+  33% { transform: rotate(1deg) scaleY(1.02); }
+  66% { transform: rotate(-0.5deg) scaleY(0.98); }
+}
+
+@keyframes grass-wave {
+  0%, 100% { transform: skewX(-2deg); }
+  50% { transform: skewX(2deg); }
+}
+
+@keyframes horse-walk {
+  0% { transform: translateX(-100px); opacity: 0; }
+  10% { opacity: 0.06; }
+  90% { opacity: 0.06; }
+  100% { transform: translateX(calc(100vw + 100px)); opacity: 0; }
+}
+
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.4s ease-out;
 }
 
 .animate-slide-up {
-  animation: slide-up 0.4s ease-out;
+  animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .animate-scale-in {
-  animation: scale-in 0.2s ease-out;
+  animation: scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .animate-slide-in-right {
-  animation: slide-in-right 0.3s ease-out;
+  animation: slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-sway {
+  animation: sway 4s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.animate-sway-slow {
+  animation: sway-slow 6s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.animate-horse-walk {
+  animation: horse-walk 25s linear infinite;
+}
+
+/* ── Grain overlay ────────────────────────────────── */
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.025;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  z-index: 1;
+}
+
+.grain-dark::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.04;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  z-index: 1;
+}
+
+/* ── Grass blades effect ─────────────────────────── */
+.grass-field {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.grass-field::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background:
+    /* grass blades layer 1 — front */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 80'%3E%3Cpath d='M2 80 Q4 40 6 20 Q8 40 10 80' fill='%231f4d29' opacity='0.7'/%3E%3Cpath d='M12 80 Q15 30 18 10 Q20 35 22 80' fill='%232d6237' opacity='0.6'/%3E%3Cpath d='M24 80 Q26 45 28 25 Q30 50 32 80' fill='%231f4d29' opacity='0.5'/%3E%3Cpath d='M34 80 Q37 20 40 5 Q42 30 44 80' fill='%233d7a47' opacity='0.6'/%3E%3Cpath d='M46 80 Q48 50 50 30 Q52 45 54 80' fill='%232d6237' opacity='0.7'/%3E%3Cpath d='M56 80 Q59 25 62 8 Q64 35 66 80' fill='%231f4d29' opacity='0.5'/%3E%3Cpath d='M68 80 Q70 40 72 18 Q74 42 76 80' fill='%233d7a47' opacity='0.6'/%3E%3Cpath d='M78 80 Q81 35 84 12 Q86 38 88 80' fill='%232d6237' opacity='0.7'/%3E%3Cpath d='M90 80 Q92 48 94 28 Q96 46 98 80' fill='%231f4d29' opacity='0.5'/%3E%3Cpath d='M100 80 Q103 22 106 6 Q108 32 110 80' fill='%233d7a47' opacity='0.6'/%3E%3Cpath d='M112 80 Q114 42 116 22 Q118 44 120 80' fill='%232d6237' opacity='0.5'/%3E%3C/svg%3E") repeat-x bottom;
+  background-size: 120px 80px;
+  animation: grass-wave 5s ease-in-out infinite;
+}
+
+.grass-field::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -20px;
+  right: -20px;
+  height: 100%;
+  background:
+    /* grass blades layer 2 — back, offset */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60'%3E%3Cpath d='M3 60 Q5 30 7 12 Q9 32 11 60' fill='%235e9466' opacity='0.4'/%3E%3Cpath d='M15 60 Q18 25 21 8 Q23 28 25 60' fill='%238fb896' opacity='0.3'/%3E%3Cpath d='M30 60 Q32 35 34 18 Q36 38 38 60' fill='%235e9466' opacity='0.35'/%3E%3Cpath d='M42 60 Q45 22 48 5 Q50 25 52 60' fill='%238fb896' opacity='0.3'/%3E%3Cpath d='M56 60 Q58 38 60 22 Q62 40 64 60' fill='%235e9466' opacity='0.4'/%3E%3Cpath d='M68 60 Q71 28 74 10 Q76 30 78 60' fill='%238fb896' opacity='0.35'/%3E%3Cpath d='M82 60 Q84 34 86 16 Q88 36 90 60' fill='%235e9466' opacity='0.3'/%3E%3Cpath d='M94 60 Q96 40 98 24 Q100 42 102 60' fill='%238fb896' opacity='0.4'/%3E%3C/svg%3E") repeat-x bottom;
+  background-size: 100px 60px;
+  animation: grass-wave 7s ease-in-out infinite reverse;
+}
+
+/* ── Ground gradient for grass ───────────────────── */
+.grass-ground {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to top, #1a3a2a 0%, #1f4d29 40%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Horse silhouette ────────────────────────────── */
+.horse-silhouette {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Horseshoe decorations ───────────────────────── */
+.horseshoe-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 44' opacity='0.03'%3E%3Cpath d='M20 4 C10 4 4 12 4 22 C4 30 8 36 12 40 L16 36 C13 33 10 28 10 22 C10 15 14 10 20 10 C26 10 30 15 30 22 C30 28 27 33 24 36 L28 40 C32 36 36 30 36 22 C36 12 30 4 20 4Z' fill='%23c8964e'/%3E%3C/svg%3E");
+  background-size: 40px 44px;
+}
+
+/* ── Fence decorative border ─────────────────────── */
+.fence-border {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 30'%3E%3Crect x='5' y='10' width='6' height='20' rx='1' fill='%23654025' opacity='0.15'/%3E%3Crect x='35' y='5' width='6' height='25' rx='1' fill='%23654025' opacity='0.15'/%3E%3Crect x='65' y='10' width='6' height='20' rx='1' fill='%23654025' opacity='0.15'/%3E%3Crect x='0' y='14' width='80' height='3' rx='1' fill='%23654025' opacity='0.1'/%3E%3Crect x='0' y='22' width='80' height='3' rx='1' fill='%23654025' opacity='0.1'/%3E%3C/svg%3E");
+  background-size: 80px 30px;
+  background-repeat: repeat-x;
 }
 
 /* ── Utilities ────────────────────────────────────── */
@@ -74,5 +228,14 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .font-display {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+  .font-body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
   }
 }

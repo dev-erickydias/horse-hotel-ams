@@ -84,9 +84,9 @@ export default function BookingsPage() {
       <Header title={isStaff ? t.bookings.title : t.bookings.clientTitle} />
       <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-0.5">
+          <div className="flex items-center gap-1 bg-cream-200 rounded-lg p-0.5">
             {['all', 'pending', 'approved', 'rejected'].map((f) => (
-              <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filter === f ? 'bg-white shadow text-stone-900' : 'text-stone-500'}`}>
+              <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filter === f ? 'bg-white shadow text-stone-800' : 'text-stone-500'}`}>
                 {filterLabels[f]}
               </button>
             ))}
@@ -107,7 +107,7 @@ export default function BookingsPage() {
                   <CardBody>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1"><h3 className="text-sm font-semibold text-stone-900">{r.title}</h3><Badge variant={cfg.color}>{r.status}</Badge></div>
+                        <div className="flex items-center gap-2 mb-1"><h3 className="text-sm font-semibold text-stone-800">{r.title}</h3><Badge variant={cfg.color}>{r.status}</Badge></div>
                         <p className="text-sm text-stone-600 mb-2">{r.description}</p>
                         <div className="flex flex-wrap gap-4 text-xs text-stone-400">
                           {isStaff && <span>{t.dashboard.from}: {r.clientName}</span>}
@@ -121,7 +121,7 @@ export default function BookingsPage() {
                           )}
                           <span>{t.bookings.submitted}: {format(parseISO(r.createdAt), 'MMM d, yyyy')}</span>
                         </div>
-                        {r.adminNotes && <div className="mt-3 p-3 rounded-lg bg-stone-50 text-xs text-stone-600"><span className="font-medium">{t.bookings.adminNotes}:</span> {r.adminNotes}</div>}
+                        {r.adminNotes && <div className="mt-3 p-3 rounded-lg bg-cream-100 text-xs text-stone-600"><span className="font-medium">{t.bookings.adminNotes}:</span> {r.adminNotes}</div>}
                       </div>
                       {isStaff && r.status === 'pending' && (
                         <Button size="sm" variant="secondary" onClick={() => { setReviewModal(r.id); setAdminNotes(''); }}>{t.common.review}</Button>
@@ -145,7 +145,7 @@ export default function BookingsPage() {
               <Input label={t.bookings.startTime} type="time" value={form.requestedTime} onChange={(e) => setForm({ ...form, requestedTime: e.target.value })} />
               <Input label={t.bookings.endTime} type="time" value={form.requestedEndTime} onChange={(e) => setForm({ ...form, requestedEndTime: e.target.value })} />
             </div>
-            <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
+            <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
               <Button onClick={submitRequest}>{t.common.submit}</Button>
             </div>
@@ -156,7 +156,7 @@ export default function BookingsPage() {
           {reviewing && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold text-stone-900">{reviewing.title}</h3>
+                <h3 className="text-sm font-semibold text-stone-800">{reviewing.title}</h3>
                 <p className="text-sm text-stone-600 mt-1">{reviewing.description}</p>
                 <p className="text-xs text-stone-400 mt-2">
                   {t.dashboard.from}: {reviewing.clientName}
@@ -166,7 +166,7 @@ export default function BookingsPage() {
                 </p>
               </div>
               <Textarea label={t.bookings.adminNotes} value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} placeholder={t.bookings.adminNotesPlaceholder} />
-              <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
+              <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
                 <Button variant="danger" onClick={() => reviewRequest(reviewing.id, 'rejected')} icon={<XCircle size={16} />}>{t.common.reject}</Button>
                 <Button variant="success" onClick={() => reviewRequest(reviewing.id, 'approved')} icon={<CheckCircle size={16} />}>{t.common.approve}</Button>
               </div>

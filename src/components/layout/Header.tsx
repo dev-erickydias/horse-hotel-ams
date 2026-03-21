@@ -37,7 +37,6 @@ export default function Header({ title }: { title: string }) {
   const unread = notifications.filter((n) => !n.read).length;
   const markAllRead = () => { api.markAllRead(); loadNotifications(); };
 
-  // Check if a request notification is still pending
   const getRequestIfPending = (n: Notification) => {
     if (n.type !== 'request' || !n.sourceId || !isStaff) return null;
     const requests = api.getRequests();
@@ -51,7 +50,6 @@ export default function Header({ title }: { title: string }) {
     const req = api.getRequests().find((r) => r.id === n.sourceId);
     if (!req) return;
     api.updateRequest(n.sourceId, { status: 'approved' });
-    // Notify client
     api.addNotification({
       type: 'request',
       title: t.common.approved,
@@ -71,7 +69,6 @@ export default function Header({ title }: { title: string }) {
     const req = api.getRequests().find((r) => r.id === n.sourceId);
     if (!req) return;
     api.updateRequest(n.sourceId, { status: 'rejected' });
-    // Notify client
     api.addNotification({
       type: 'request',
       title: t.common.rejected,
@@ -95,72 +92,71 @@ export default function Header({ title }: { title: string }) {
   };
 
   return (
-    <header className="h-16 border-b border-stone-200 bg-white/80 backdrop-blur-sm flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
+    <header className="h-16 border-b border-cream-300/60 bg-white/70 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
       <div className="lg:ml-0 ml-12">
-        <h1 className="text-xl font-bold text-stone-900">{title}</h1>
+        <h1 className="text-xl font-bold text-stone-800">{title}</h1>
       </div>
       <div className="flex items-center gap-3">
         <LangSwitcher />
         <div className="relative" ref={ref}>
-          <button onClick={() => setOpen(!open)} className="relative p-2 rounded-lg hover:bg-stone-100 transition-colors text-stone-500">
+          <button onClick={() => setOpen(!open)} className="relative p-2 rounded-xl hover:bg-cream-200 transition-colors text-stone-500">
             <Bell size={20} />
             {unread > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">{unread}</span>
+              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold font-body rounded-full flex items-center justify-center animate-pulse">{unread}</span>
             )}
           </button>
           {open && (
-            <div className="absolute right-0 top-12 w-96 bg-white rounded-xl shadow-xl border border-stone-200 overflow-hidden animate-scale-in z-50">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100">
-                <h3 className="text-sm font-semibold text-stone-900">{t.notifications.title}</h3>
+            <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-xl shadow-stone-200/50 border border-cream-300/80 overflow-hidden animate-scale-in z-50">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200">
+                <h3 className="text-sm font-semibold text-stone-800 font-body">{t.notifications.title}</h3>
                 {unread > 0 && (
-                  <button onClick={markAllRead} className="text-xs text-amber-600 hover:text-amber-700 flex items-center gap-1">
+                  <button onClick={markAllRead} className="text-xs font-body text-forest-600 hover:text-forest-700 flex items-center gap-1">
                     <Check size={12} /> {t.notifications.markAllRead}
                   </button>
                 )}
               </div>
               <div className="max-h-[28rem] overflow-y-auto">
                 {notifications.length === 0 ? (
-                  <p className="text-sm text-stone-400 text-center py-8">{t.notifications.noNotifications}</p>
+                  <p className="text-sm text-stone-400 text-center py-8 font-body">{t.notifications.noNotifications}</p>
                 ) : (
                   notifications.slice(0, 15).map((n) => {
                     const pendingReq = getRequestIfPending(n);
                     return (
                       <div key={n.id}
-                        className={`px-4 py-3 border-b border-stone-50 hover:bg-stone-50 transition-colors cursor-pointer ${!n.read ? 'bg-amber-50/40' : ''}`}
+                        className={`px-4 py-3 border-b border-cream-100 hover:bg-cream-50 transition-colors cursor-pointer ${!n.read ? 'bg-gold-50/40' : ''}`}
                         onClick={() => handleNotificationClick(n)}>
                         <div className="flex items-start gap-3">
                           <span className="text-lg">{typeIcons[n.type] || '🔔'}</span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className={`text-sm flex-1 ${!n.read ? 'font-semibold text-stone-900' : 'text-stone-700'}`}>{n.title}</p>
+                              <p className={`text-sm font-body flex-1 ${!n.read ? 'font-semibold text-stone-800' : 'text-stone-600'}`}>{n.title}</p>
                               {n.link && <ExternalLink size={12} className="text-stone-300 shrink-0" />}
                             </div>
-                            <p className="text-xs text-stone-500 mt-0.5 truncate">{n.message}</p>
-                            <p className="text-[11px] text-stone-400 mt-1">{format(new Date(n.createdAt), 'MMM d, HH:mm')}</p>
+                            <p className="text-xs text-stone-500 mt-0.5 truncate font-body">{n.message}</p>
+                            <p className="text-[11px] text-stone-400 mt-1 font-body">{format(new Date(n.createdAt), 'MMM d, HH:mm')}</p>
 
-                            {/* Quick approve/reject for pending requests */}
                             {pendingReq && (
                               <div className="flex items-center gap-2 mt-2">
                                 <button
                                   onClick={(e) => handleApprove(n, e)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100 transition-colors border border-emerald-200"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-medium font-body hover:bg-emerald-100 transition-colors border border-emerald-200"
                                 >
                                   <CheckCircle size={12} /> {t.common.approve}
                                 </button>
                                 <button
                                   onClick={(e) => handleReject(n, e)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-red-50 text-red-700 text-xs font-medium hover:bg-red-100 transition-colors border border-red-200"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-700 text-xs font-medium font-body hover:bg-red-100 transition-colors border border-red-200"
                                 >
                                   <XCircle size={12} /> {t.common.reject}
                                 </button>
-                                <span className="text-[10px] text-stone-400 ml-1">
+                                <span className="text-[10px] text-stone-400 ml-1 font-body">
                                   {pendingReq.facilityType}{pendingReq.requestedDate ? ` · ${pendingReq.requestedDate}` : ''}
                                   {pendingReq.requestedTime ? ` · ${pendingReq.requestedTime}` : ''}
                                 </span>
                               </div>
                             )}
                           </div>
-                          {!n.read && <span className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />}
+                          {!n.read && <span className="w-2 h-2 rounded-full bg-gold-400 mt-1.5 shrink-0" />}
                         </div>
                       </div>
                     );

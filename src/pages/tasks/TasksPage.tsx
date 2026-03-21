@@ -39,13 +39,13 @@ export default function TasksPage() {
   };
 
   const renderTask = (x: Task) => (
-    <div key={x.id} className="flex items-start gap-4 py-4 border-b border-stone-100 last:border-0 group">
-      <button onClick={() => toggleComplete(x.id, x.completed)} className={`mt-0.5 shrink-0 transition-colors ${x.completed ? 'text-emerald-500' : 'text-stone-300 hover:text-amber-500'}`}>
+    <div key={x.id} className="flex items-start gap-4 py-4 border-b border-cream-200 last:border-0 group">
+      <button onClick={() => toggleComplete(x.id, x.completed)} className={`mt-0.5 shrink-0 transition-colors ${x.completed ? 'text-emerald-500' : 'text-stone-300 hover:text-gold-400'}`}>
         {x.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}
       </button>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className={`text-sm font-medium ${x.completed ? 'text-stone-400 line-through' : 'text-stone-900'}`}>{x.title}</p>
+          <p className={`text-sm font-medium ${x.completed ? 'text-stone-400 line-through' : 'text-stone-800'}`}>{x.title}</p>
           <Badge variant={priorityColors[x.priority]}>{x.priority}</Badge>
           {x.horseName && <Badge variant="purple">{x.horseName}</Badge>}
         </div>
@@ -63,9 +63,9 @@ export default function TasksPage() {
       <Header title={t.tasks.title} />
       <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-0.5">
-            <button onClick={() => setTab('active')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${tab === 'active' ? 'bg-white shadow text-stone-900' : 'text-stone-500'}`}>{t.common.active}</button>
-            <button onClick={() => setTab('completed')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${tab === 'completed' ? 'bg-white shadow text-stone-900' : 'text-stone-500'}`}>{t.common.completed}</button>
+          <div className="flex items-center gap-1 bg-cream-200 rounded-lg p-0.5">
+            <button onClick={() => setTab('active')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${tab === 'active' ? 'bg-white shadow text-stone-800' : 'text-stone-500'}`}>{t.common.active}</button>
+            <button onClick={() => setTab('completed')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${tab === 'completed' ? 'bg-white shadow text-stone-800' : 'text-stone-500'}`}>{t.common.completed}</button>
           </div>
           <Button onClick={() => setModalOpen(true)} icon={<Plus size={16} />}>{t.tasks.newTask}</Button>
         </div>
@@ -76,12 +76,12 @@ export default function TasksPage() {
           <div className="space-y-6">
             {tab === 'active' && todayTasks.length > 0 && (
               <Card>
-                <div className="px-5 py-3 border-b border-stone-100 bg-amber-50/50"><h3 className="text-sm font-semibold text-amber-800">{t.tasks.todaysTasks} ({todayTasks.length})</h3></div>
+                <div className="px-5 py-3 border-b border-cream-200 bg-gold-50/50"><h3 className="text-sm font-semibold text-forest-800">{t.tasks.todaysTasks} ({todayTasks.length})</h3></div>
                 <CardBody>{todayTasks.map(renderTask)}</CardBody>
               </Card>
             )}
             <Card>
-              <div className="px-5 py-3 border-b border-stone-100"><h3 className="text-sm font-semibold text-stone-700">{tab === 'active' ? (todayTasks.length > 0 ? t.tasks.upcomingTasks : t.tasks.allActive) : t.tasks.completedTasks}</h3></div>
+              <div className="px-5 py-3 border-b border-cream-200"><h3 className="text-sm font-semibold text-stone-700">{tab === 'active' ? (todayTasks.length > 0 ? t.tasks.upcomingTasks : t.tasks.allActive) : t.tasks.completedTasks}</h3></div>
               <CardBody>{(tab === 'active' && todayTasks.length > 0 ? otherTasks : tasks).map(renderTask)}</CardBody>
             </Card>
           </div>
@@ -102,7 +102,7 @@ export default function TasksPage() {
               <Select label={t.tasks.priority} value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
                 options={[{ value: 'low', label: t.tasks.low }, { value: 'medium', label: t.tasks.medium }, { value: 'high', label: t.tasks.high }, { value: 'urgent', label: t.tasks.urgent }]} />
             </div>
-            <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
+            <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
               <Button onClick={save}>{t.tasks.createTask}</Button>
             </div>

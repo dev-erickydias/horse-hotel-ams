@@ -17,7 +17,7 @@ const eventTypeConfig: Record<string, { color: string; bgColor: string; icon: ty
   booking: { color: 'text-blue-700', bgColor: 'bg-blue-50 border-blue-200', icon: CalendarCheck },
   transport: { color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200', icon: Truck },
   arrival: { color: 'text-green-700', bgColor: 'bg-green-50 border-green-200', icon: LogIn },
-  departure: { color: 'text-amber-700', bgColor: 'bg-amber-50 border-amber-200', icon: LogOut },
+  departure: { color: 'text-forest-700', bgColor: 'bg-gold-50 border-gold-200', icon: LogOut },
 };
 
 export default function SchedulePage() {
@@ -134,18 +134,18 @@ export default function SchedulePage() {
             <Button size="sm" variant="secondary" onClick={navigatePrev} icon={<ChevronLeft size={16} />} />
             <Button size="sm" variant="secondary" onClick={goToToday}>{t.common.today}</Button>
             <Button size="sm" variant="secondary" onClick={navigateNext} icon={<ChevronRight size={16} />} />
-            <h2 className="text-lg font-semibold text-stone-900 ml-2">
+            <h2 className="text-lg font-semibold text-stone-800 ml-2">
               {viewMode === 'week'
                 ? `${format(weekDays[0], 'MMM d')} - ${format(weekDays[6], 'MMM d, yyyy')}`
                 : format(currentDate, 'EEEE, MMMM d, yyyy')
               }
             </h2>
           </div>
-          <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-0.5">
-            <button onClick={() => setViewMode('day')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'day' ? 'bg-white shadow text-stone-900' : 'text-stone-500'}`}>
+          <div className="flex items-center gap-1 bg-cream-200 rounded-lg p-0.5">
+            <button onClick={() => setViewMode('day')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'day' ? 'bg-white shadow text-stone-800' : 'text-stone-500'}`}>
               {t.schedule.dayView}
             </button>
-            <button onClick={() => setViewMode('week')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'week' ? 'bg-white shadow text-stone-900' : 'text-stone-500'}`}>
+            <button onClick={() => setViewMode('week')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'week' ? 'bg-white shadow text-stone-800' : 'text-stone-500'}`}>
               {t.schedule.weekView}
             </button>
           </div>
@@ -172,12 +172,12 @@ export default function SchedulePage() {
               return (
                 <div
                   key={day.toISOString()}
-                  className={`min-h-[140px] rounded-lg border p-2 cursor-pointer transition-all hover:shadow-sm ${isToday ? 'border-amber-300 bg-amber-50/30' : 'border-stone-200 bg-white'}`}
+                  className={`min-h-[140px] rounded-lg border p-2 cursor-pointer transition-all hover:shadow-sm ${isToday ? 'border-gold-300 bg-gold-50/30' : 'border-cream-300 bg-white'}`}
                   onClick={() => { setCurrentDate(day); setViewMode('day'); }}
                 >
                   <div className="text-center mb-2">
                     <p className="text-[10px] text-stone-400 uppercase">{format(day, 'EEE')}</p>
-                    <p className={`text-sm font-bold ${isToday ? 'text-amber-600' : 'text-stone-900'}`}>{format(day, 'd')}</p>
+                    <p className={`text-sm font-bold ${isToday ? 'text-forest-600' : 'text-stone-800'}`}>{format(day, 'd')}</p>
                   </div>
                   <div className="space-y-1">
                     {dayEvents.slice(0, 3).map((e) => renderEvent(e, true))}
@@ -208,8 +208,8 @@ export default function SchedulePage() {
         <Modal open={!!editModal} onClose={() => setEditModal(null)} title={t.schedule.editEvent}>
           {editModal && (
             <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-stone-50 border border-stone-100">
-                <h3 className="text-sm font-semibold text-stone-900">{editModal.title}</h3>
+              <div className="p-3 rounded-lg bg-cream-100 border border-cream-200">
+                <h3 className="text-sm font-semibold text-stone-800">{editModal.title}</h3>
                 <p className="text-xs text-stone-500 mt-1">{format(parseISO(editModal.date), 'EEEE, MMMM d, yyyy')}</p>
                 {editModal.userName && <p className="text-xs text-stone-500">{editModal.userName}</p>}
               </div>
@@ -217,7 +217,7 @@ export default function SchedulePage() {
                 <Input label={t.schedule.startTime} type="time" value={editTime} onChange={(e) => setEditTime(e.target.value)} />
                 <Input label={t.schedule.endTime} type="time" value={editEndTime} onChange={(e) => setEditEndTime(e.target.value)} />
               </div>
-              <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
+              <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
                 <Button variant="secondary" onClick={() => setEditModal(null)}>{t.common.cancel}</Button>
                 <Button onClick={saveEdit}>{t.common.save}</Button>
               </div>

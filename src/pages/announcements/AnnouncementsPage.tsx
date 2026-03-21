@@ -99,12 +99,12 @@ export default function AnnouncementsPage() {
         ) : (
           <div className="space-y-4 max-w-3xl">
             {announcements.map((a) => (
-              <Card key={a.id} className={a.pinned ? 'border-amber-200 bg-amber-50/30' : ''}>
+              <Card key={a.id} className={a.pinned ? 'border-gold-200 bg-gold-50/30' : ''}>
                 <CardBody className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
-                      {a.pinned && <Pin size={14} className="text-amber-500" />}
-                      <h3 className="text-base font-semibold text-stone-900">{a.title}</h3>
+                      {a.pinned && <Pin size={14} className="text-gold-400" />}
+                      <h3 className="text-base font-semibold text-stone-800">{a.title}</h3>
                     </div>
                     <div className="flex items-center gap-2">
                       {isStaff && a.audience && a.audience !== 'all' && (
@@ -116,7 +116,7 @@ export default function AnnouncementsPage() {
                     </div>
                   </div>
                   <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{a.content}</p>
-                  <div className="flex items-center justify-between pt-2 border-t border-stone-100">
+                  <div className="flex items-center justify-between pt-2 border-t border-cream-200">
                     <div className="flex items-center gap-4 text-xs text-stone-400">
                       <span>{t.announcements.by}: {a.authorName}</span>
                       <span>{format(parseISO(a.createdAt), 'MMMM d, yyyy')}</span>
@@ -124,7 +124,7 @@ export default function AnnouncementsPage() {
                     {isStaff && (
                       <button
                         onClick={() => handleArchive(a.id)}
-                        className="inline-flex items-center gap-1 text-xs text-stone-400 hover:text-amber-600 transition-colors px-2 py-1 rounded hover:bg-amber-50"
+                        className="inline-flex items-center gap-1 text-xs text-stone-400 hover:text-forest-600 transition-colors px-2 py-1 rounded hover:bg-gold-50"
                       >
                         <Archive size={13} /> {t.announcements.archive}
                       </button>
@@ -163,10 +163,10 @@ export default function AnnouncementsPage() {
                           </div>
                           <Badge variant={categoryColors[a.category]}>{catLabels[a.category]}</Badge>
                         </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-stone-100">
+                        <div className="flex items-center justify-between pt-2 border-t border-cream-200">
                           <div className="flex items-center gap-3 text-xs text-stone-400">
                             <span>{t.announcements.by}: {a.authorName}</span>
-                            <span className={`font-medium ${remaining <= 3 ? 'text-red-500' : 'text-amber-500'}`}>
+                            <span className={`font-medium ${remaining <= 3 ? 'text-red-500' : 'text-gold-400'}`}>
                               {remaining} {t.announcements.daysLeft}
                             </span>
                           </div>
@@ -207,7 +207,7 @@ export default function AnnouncementsPage() {
                 options={audienceOptions} />
             </div>
             <Toggle label={t.announcements.pinPost} checked={form.pinned} onChange={(v) => setForm({ ...form, pinned: v })} />
-            <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
+            <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
               <Button onClick={save}>{t.announcements.publish}</Button>
             </div>

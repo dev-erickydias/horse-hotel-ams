@@ -64,7 +64,6 @@ export default function HorsesPage() {
     return list;
   }, [user, isStaff, search, filter, tick]);
 
-  // Owners can be clients OR workers (workers can also have horses)
   const ownerUsers = api.getUsers().filter((u) => u.role === 'client' || u.role === 'worker');
 
   const openCreate = () => { setEditing(null); setForm(emptyHorse); setModalOpen(true); };
@@ -79,7 +78,6 @@ export default function HorsesPage() {
     setModalOpen(false); setTick((x) => x + 1);
   };
 
-  // Only admin can delete horses
   const deleteHorse = (id: string) => {
     if (!isAdmin) return;
     if (!confirm(t.common.confirmDelete)) return;
@@ -94,9 +92,7 @@ export default function HorsesPage() {
     return t.horses.checkedOut;
   };
 
-  // Staff (admin + worker) and clients can add; but clients add their own horse via profile
   const canAdd = isStaff;
-  // Admin can edit everything; worker can edit but not delete; client can only view
   const canEdit = isStaff;
   const canDelete = isAdmin;
 
@@ -109,12 +105,12 @@ export default function HorsesPage() {
             <div className="relative flex-1 max-w-xs">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
               <input type="text" placeholder={t.horses.searchPlaceholder} value={search} onChange={(e) => setSearch(e.target.value)}
-                autoComplete="off" className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-stone-200 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none" />
+                autoComplete="off" className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-cream-400/80 text-sm font-body focus:border-forest-500 focus:ring-2 focus:ring-forest-500/15 outline-none bg-white" />
             </div>
-            <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-0.5">
+            <div className="flex items-center gap-1 bg-cream-200 rounded-xl p-0.5">
               {['all', 'upcoming', 'checked-in', 'checked-out'].map((f) => (
                 <button key={f} onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filter === f ? 'bg-white shadow text-stone-900' : 'text-stone-500 hover:text-stone-700'}`}>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium font-body transition-all ${filter === f ? 'bg-white shadow-sm text-stone-800' : 'text-stone-500 hover:text-stone-700'}`}>
                   {f === 'all' ? t.common.all : statusLabel(f)}
                 </button>
               ))}
@@ -132,16 +128,16 @@ export default function HorsesPage() {
                 <CardBody className="space-y-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-lg">{h.name.charAt(0)}</div>
+                      <div className="w-11 h-11 rounded-xl bg-gold-100 flex items-center justify-center text-gold-700 font-bold text-lg font-display">{h.name.charAt(0)}</div>
                       <div>
-                        <h3 className="font-semibold text-stone-900">{h.name}</h3>
-                        <p className="text-xs text-stone-500 font-mono font-semibold bg-stone-100 px-2 py-0.5 rounded mt-0.5 inline-block">{h.passportId}</p>
+                        <h3 className="font-semibold text-stone-800 font-body">{h.name}</h3>
+                        <p className="text-xs text-stone-500 font-mono font-semibold bg-cream-200 px-2 py-0.5 rounded-md mt-0.5 inline-block">{h.passportId}</p>
                       </div>
                     </div>
                     <Badge variant={statusColors[h.status]}>{statusLabel(h.status)}</Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-y-2 text-sm">
+                  <div className="grid grid-cols-2 gap-y-2 text-sm font-body">
                     <div><span className="text-stone-400">{t.horses.mother}:</span> <span className="text-stone-700 font-medium ml-1">{h.motherName}</span></div>
                     <div><span className="text-stone-400">{t.horses.owner}:</span> <span className="text-stone-700 font-medium ml-1">{h.ownerName}</span></div>
                     <div><span className="text-stone-400">{t.horses.checkIn}:</span> <span className="text-stone-700 font-medium ml-1">{safeFormatDate(h.checkIn, 'MMM d')}</span></div>
@@ -152,7 +148,6 @@ export default function HorsesPage() {
                     )}
                   </div>
 
-                  {/* Care badges */}
                   <div className="flex flex-wrap gap-2">
                     {h.walkerSchedule && <Badge variant="info">{t.horses.walker}</Badge>}
                     {h.paddockSchedule && <Badge variant="success">{t.horses.paddock}</Badge>}
@@ -161,16 +156,14 @@ export default function HorsesPage() {
                     {h.feedType && h.feedType !== 'standard' && <Badge variant="warning">{feedLabels[h.feedType] || h.feedType}</Badge>}
                   </div>
 
-                  {/* Special care note */}
                   {h.specialCare && (
-                    <div className="text-xs text-stone-500 bg-amber-50 border border-amber-100 rounded-lg p-2">
-                      <span className="font-semibold text-amber-700">{t.horses.specialCare}:</span> {h.specialCare}
+                    <div className="text-xs text-stone-500 bg-gold-50 border border-gold-100 rounded-xl p-2.5 font-body">
+                      <span className="font-semibold text-gold-700">{t.horses.specialCare}:</span> {h.specialCare}
                     </div>
                   )}
 
-                  {/* Action buttons based on role */}
                   {(canEdit || canDelete) && (
-                    <div className="flex gap-2 pt-2 border-t border-stone-100">
+                    <div className="flex gap-2 pt-2 border-t border-cream-200">
                       {canEdit && <Button size="sm" variant="secondary" icon={<Edit2 size={14} />} onClick={() => openEdit(h)}>{t.common.edit}</Button>}
                       {canDelete && <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} onClick={() => deleteHorse(h.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">{t.common.remove}</Button>}
                     </div>
@@ -226,9 +219,8 @@ export default function HorsesPage() {
               </div>
             )}
 
-            {/* Special Care Section */}
-            <div className="pt-3 border-t border-stone-200">
-              <h3 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2"><Leaf size={16} className="text-emerald-600" /> {t.horses.specialCare}</h3>
+            <div className="pt-3 border-t border-cream-300">
+              <h3 className="text-sm font-semibold text-stone-700 mb-3 flex items-center gap-2 font-body"><Leaf size={16} className="text-forest-600" /> {t.horses.specialCare}</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <Select label={t.horses.foodType} value={form.foodType || 'hay'} onChange={(e) => upd('foodType', e.target.value as FoodType)}
@@ -244,7 +236,7 @@ export default function HorsesPage() {
             </div>
 
             <Textarea label={t.horses.notes} value={form.notes || ''} onChange={(e) => upd('notes', e.target.value)} />
-            <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
+            <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
               <Button onClick={save}>{editing ? t.common.save : t.horses.addHorse}</Button>
             </div>

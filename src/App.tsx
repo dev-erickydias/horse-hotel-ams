@@ -8,6 +8,8 @@ import LandingPage from './pages/landing/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import SetPasswordPage from './pages/auth/SetPasswordPage';
 import SignupPage from './pages/auth/SignupPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import HorsesPage from './pages/horses/HorsesPage';
 import TasksPage from './pages/tasks/TasksPage';
@@ -35,6 +37,8 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to="/app/dashboard" replace /> : <LoginPage />} />
       <Route path="/signup" element={user ? <Navigate to="/app/dashboard" replace /> : <SignupPage />} />
       <Route path="/set-password/:token" element={<SetPasswordPage />} />
+      <Route path="/forgot-password" element={user ? <Navigate to="/app/dashboard" replace /> : <ForgotPasswordPage />} />
+      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="horses" element={<HorsesPage />} />
