@@ -36,6 +36,7 @@ export const nl: Translations = {
     welcome: 'Welkom terug',
     noResults: 'Geen resultaten gevonden',
     confirmDelete: 'Weet u zeker dat u dit wilt verwijderen?',
+    fillRequired: 'Vul alle verplichte velden in.',
     language: 'Taal',
   },
 

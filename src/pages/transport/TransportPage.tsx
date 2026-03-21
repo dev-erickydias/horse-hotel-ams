@@ -83,12 +83,14 @@ export default function TransportPage() {
   const { t } = useLang();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ horseId: '', horseName: '', transportDate: '', transportTime: '', origin: 'Horse Hotel', destination: '', driver: '', driverId: '', notes: '', status: 'scheduled' as Transport['status'] });
+  const [formError, setFormError] = useState('');
   const rev = useData('*');
   const transports = useMemo(() => api.getTransports(), [rev]);
   const horses = api.getHorses();
 
   const save = () => {
-    if (!form.horseId || !form.transportDate || !form.destination) return;
+    if (!form.horseId || !form.transportDate || !form.destination) { setFormError(t.common.fillRequired || 'Please fill in all required fields.'); return; }
+    setFormError('');
     const horse = horses.find((h) => h.id === form.horseId);
     api.createTransport({ ...form, horseName: horse?.name || '', createdAt: new Date().toISOString().split('T')[0] });
     // Add notification
@@ -174,8 +176,9 @@ export default function TransportPage() {
               placeholder={t.transport.driverPlaceholder}
             />
             <Textarea label={t.transport.notes} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            {formError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{formError}</div>}
             <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
-              <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
+              <Button variant="secondary" onClick={() => { setModalOpen(false); setFormError(''); }}>{t.common.cancel}</Button>
               <Button onClick={save}>{t.transport.schedule}</Button>
             </div>
           </div>

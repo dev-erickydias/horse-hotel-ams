@@ -35,6 +35,7 @@ export const en = {
     welcome: 'Welcome back',
     noResults: 'No results found',
     confirmDelete: 'Are you sure you want to remove this?',
+    fillRequired: 'Please fill in all required fields.',
     language: 'Language',
   },
 

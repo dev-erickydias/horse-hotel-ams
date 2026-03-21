@@ -22,13 +22,14 @@ export default function UsersPage() {
   const { t } = useLang();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', role: 'worker' as Role, phone: '', password: '' });
+  const [formError, setFormError] = useState('');
   const [approveRole, setApproveRole] = useState<Record<string, Role>>({});
   const [editRoleUser, setEditRoleUser] = useState<string | null>(null);
   const [editRoleValue, setEditRoleValue] = useState<Role>('client');
   const [search, setSearch] = useState('');
   const rev = useData('*');
-  const allUsers = (() => { void tick; return api.getUsers().filter((u) => u.email !== MASTER_ADMIN_EMAIL); })();
-  const allHorses = (() => { void tick; return api.getHorses(); })();
+  const allUsers = useMemo(() => api.getUsers().filter((u) => u.email !== MASTER_ADMIN_EMAIL), [rev]);
+  const allHorses = useMemo(() => api.getHorses(), [rev]);
   const pendingUsers = allUsers.filter((u) => u.status === 'pending');
   const isAdmin = isRole('admin');
 
@@ -67,23 +68,21 @@ export default function UsersPage() {
       link: '/app/users',
       audience: 'staff',
     });
-   
   };
 
   const handleReject = (userId: string) => {
     api.deleteUser(userId);
-   
   };
 
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    if (!form.name.trim() || !form.email.trim() || !form.password) return;
-    if (!isValidEmail(form.email.trim())) return;
-    if (form.name.trim().length < 2 || form.name.length > 100) return;
-    if (form.password.length < 6) return;
-    // Check for duplicate email
-    if (api.getUserByEmail(form.email.trim().toLowerCase())) return;
+    if (!form.name.trim() || !form.email.trim() || !form.password) { setFormError(t.common.fillRequired || 'Please fill in all required fields.'); return; }
+    if (!isValidEmail(form.email.trim())) { setFormError(t.auth.invalidEmail); return; }
+    if (form.name.trim().length < 2 || form.name.length > 100) { setFormError(t.auth.invalidName); return; }
+    if (form.password.length < 6) { setFormError(t.auth.passwordTooShort); return; }
+    if (api.getUserByEmail(form.email.trim().toLowerCase())) { setFormError(t.auth.emailInUse); return; }
+    setFormError('');
 
     setSaving(true);
     try {
@@ -275,8 +274,9 @@ export default function UsersPage() {
                 options={[{ value: 'worker', label: t.users.worker }, { value: 'client', label: t.users.client }, { value: 'admin', label: t.users.admin }]} />
               <Input label={t.users.phone} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
+            {formError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{formError}</div>}
             <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
-              <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
+              <Button variant="secondary" onClick={() => { setModalOpen(false); setFormError(''); }}>{t.common.cancel}</Button>
               <Button onClick={save} icon={<UserPlus size={16} />}>{t.users.createUser}</Button>
             </div>
           </div>

@@ -39,10 +39,11 @@ export default function ProfilePage() {
   const [horseModal, setHorseModal] = useState(false);
   const [editingHorse, setEditingHorse] = useState<Horse | null>(null);
   const [horseForm, setHorseForm] = useState(emptyClientHorse);
+  const [profileError, setProfileError] = useState('');
+  const [horseError, setHorseError] = useState('');
   const rev = useData('*');
 
   const myHorses = useMemo(() => {
-    void tick;
     return user ? api.getHorsesByOwner(user.id) : [];
   }, [user, rev]);
 
@@ -53,7 +54,8 @@ export default function ProfilePage() {
 
   const saveProfile = () => {
     if (!user) return;
-    if (!profileForm.name.trim() || profileForm.name.trim().length < 2) return;
+    if (!profileForm.name.trim() || profileForm.name.trim().length < 2) { setProfileError(t.auth.invalidName); return; }
+    setProfileError('');
     api.updateUser(user.id, { name: profileForm.name.trim(), phone: profileForm.phone ? sanitizePhone(profileForm.phone) : '' });
     setEditingProfile(false);
     setSavedMsg(t.profile.savedSuccess);
@@ -104,7 +106,8 @@ export default function ProfilePage() {
   };
 
   const saveHorse = () => {
-    if (!user || !horseForm.name || !horseForm.passportId) return;
+    if (!user || !horseForm.name || !horseForm.passportId) { setHorseError(t.common.fillRequired || 'Please fill in all required fields.'); return; }
+    setHorseError('');
     const data: Omit<Horse, 'id'> = {
       name: horseForm.name, passportId: horseForm.passportId, motherName: horseForm.motherName,
       ownerId: user.id, ownerName: currentUser?.name || user.name,
@@ -174,9 +177,10 @@ export default function ProfilePage() {
                 <Input label={t.users.fullName} value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} />
                 <Input label={t.users.email} value={profileForm.email} disabled />
                 <Input label={t.users.phone} value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} />
+                {profileError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{profileError}</div>}
                 <div className="flex gap-2 pt-2">
                   <Button onClick={saveProfile} icon={<Save size={14} />}>{t.common.save}</Button>
-                  <Button variant="secondary" onClick={() => setEditingProfile(false)}>{t.common.cancel}</Button>
+                  <Button variant="secondary" onClick={() => { setEditingProfile(false); setProfileError(''); }}>{t.common.cancel}</Button>
                 </div>
               </div>
             ) : (
@@ -316,8 +320,9 @@ export default function ProfilePage() {
 
             <Textarea label={t.horses.notes} value={horseForm.notes} onChange={(e) => updH('notes', e.target.value)} />
 
+            {horseError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{horseError}</div>}
             <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
-              <Button variant="secondary" onClick={() => setHorseModal(false)}>{t.common.cancel}</Button>
+              <Button variant="secondary" onClick={() => { setHorseModal(false); setHorseError(''); }}>{t.common.cancel}</Button>
               <Button onClick={saveHorse}>{editingHorse ? t.common.save : t.profile.addHorse}</Button>
             </div>
           </div>

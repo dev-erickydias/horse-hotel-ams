@@ -26,6 +26,7 @@ export default function BookingsPage() {
   const [reviewModal, setReviewModal] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [form, setForm] = useState({ title: '', description: '', facilityType: 'arena', requestedDate: '', requestedTime: '', requestedEndTime: '' });
+  const [formError, setFormError] = useState('');
   const rev = useData('*');
 
   const isAdmin = isRole('admin');
@@ -37,7 +38,8 @@ export default function BookingsPage() {
   }, [user, isStaff, filter, rev]);
 
   const submitRequest = () => {
-    if (!form.title || !form.description) return;
+    if (!form.title || !form.description) { setFormError(t.common.fillRequired || 'Please fill in all required fields.'); return; }
+    setFormError('');
     const newReq = api.createRequest({
       ...form,
       clientId: user!.id,
@@ -146,8 +148,9 @@ export default function BookingsPage() {
               <Input label={t.bookings.startTime} type="time" value={form.requestedTime} onChange={(e) => setForm({ ...form, requestedTime: e.target.value })} />
               <Input label={t.bookings.endTime} type="time" value={form.requestedEndTime} onChange={(e) => setForm({ ...form, requestedEndTime: e.target.value })} />
             </div>
+            {formError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{formError}</div>}
             <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
-              <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
+              <Button variant="secondary" onClick={() => { setModalOpen(false); setFormError(''); }}>{t.common.cancel}</Button>
               <Button onClick={submitRequest}>{t.common.submit}</Button>
             </div>
           </div>

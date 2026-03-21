@@ -22,6 +22,7 @@ export default function AnnouncementsPage() {
   const { t } = useLang();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ title: '', content: '', category: 'general' as 'general' | 'maintenance' | 'transport' | 'important', audience: 'all' as AnnouncementAudience, pinned: false });
+  const [formError, setFormError] = useState('');
   const rev = useData('*');
   const [showArchived, setShowArchived] = useState(false);
 
@@ -41,7 +42,8 @@ export default function AnnouncementsPage() {
   }, [rev, isStaff]);
 
   const save = () => {
-    if (!form.title || !form.content) return;
+    if (!form.title || !form.content) { setFormError(t.common.fillRequired || 'Please fill in all required fields.'); return; }
+    setFormError('');
     const audience = isWorker && form.audience === 'clients' ? 'all' : form.audience;
     api.createAnnouncement({ ...form, audience, authorId: user!.id, authorName: user!.name, createdAt: new Date().toISOString().split('T')[0] });
     api.addNotification({
@@ -208,8 +210,9 @@ export default function AnnouncementsPage() {
                 options={audienceOptions} />
             </div>
             <Toggle label={t.announcements.pinPost} checked={form.pinned} onChange={(v) => setForm({ ...form, pinned: v })} />
+            {formError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{formError}</div>}
             <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
-              <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
+              <Button variant="secondary" onClick={() => { setModalOpen(false); setFormError(''); }}>{t.common.cancel}</Button>
               <Button onClick={save}>{t.announcements.publish}</Button>
             </div>
           </div>

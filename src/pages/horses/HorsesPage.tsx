@@ -38,6 +38,7 @@ export default function HorsesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Horse | null>(null);
   const [form, setForm] = useState<Omit<Horse, 'id'>>(emptyHorse);
+  const [formError, setFormError] = useState('');
   const rev = useData('*');
 
   const isAdmin = isRole('admin');
@@ -67,11 +68,15 @@ export default function HorsesPage() {
 
   const ownerUsers = api.getUsers().filter((u) => u.role === 'client' || u.role === 'worker');
 
-  const openCreate = () => { setEditing(null); setForm(emptyHorse); setModalOpen(true); };
+  const openCreate = () => { setEditing(null); setForm(emptyHorse); setFormError(''); setModalOpen(true); };
   const openEdit = (h: Horse) => { setEditing(h); setForm({ ...h }); setModalOpen(true); };
 
   const save = () => {
-    if (!form.name || !form.passportId || !form.checkIn || !form.checkOut) return;
+    if (!form.name || !form.passportId || !form.checkIn || !form.checkOut) {
+      setFormError(t.common.fillRequired || 'Please fill in all required fields.');
+      return;
+    }
+    setFormError('');
     const owner = ownerUsers.find((u) => u.id === form.ownerId);
     const data = { ...form, ownerName: owner?.name || form.ownerName };
     if (editing) api.updateHorse(editing.id, data);
@@ -237,6 +242,7 @@ export default function HorsesPage() {
             </div>
 
             <Textarea label={t.horses.notes} value={form.notes || ''} onChange={(e) => upd('notes', e.target.value)} />
+            {formError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{formError}</div>}
             <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
               <Button onClick={save}>{editing ? t.common.save : t.horses.addHorse}</Button>

@@ -22,6 +22,7 @@ export default function TasksPage() {
   const [tab, setTab] = useState<'active' | 'completed'>('active');
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', horseId: '', assignedTo: '', dueDate: '', priority: 'medium' as TaskPriority });
+  const [formError, setFormError] = useState('');
   const rev = useData('*');
 
   const tasks = useMemo(() => { const all = api.getTasks(); return tab === 'active' ? all.filter((x) => !x.completed) : all.filter((x) => x.completed); }, [tab, rev]);
@@ -32,7 +33,8 @@ export default function TasksPage() {
 
   const toggleComplete = (id: string, current: boolean) => { api.updateTask(id, { completed: !current }); };
   const save = () => {
-    if (!form.title || !form.dueDate || !form.assignedTo) return;
+    if (!form.title || !form.dueDate || !form.assignedTo) { setFormError(t.common.fillRequired || 'Please fill in all required fields.'); return; }
+    setFormError('');
     const worker = workers.find((w) => w.id === form.assignedTo);
     const horse = horses.find((h) => h.id === form.horseId);
     api.createTask({ ...form, assignedToName: worker?.name || '', horseName: horse?.name, completed: false, createdAt: new Date().toISOString().split('T')[0], createdBy: user!.id });
@@ -103,8 +105,9 @@ export default function TasksPage() {
               <Select label={t.tasks.priority} value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
                 options={[{ value: 'low', label: t.tasks.low }, { value: 'medium', label: t.tasks.medium }, { value: 'high', label: t.tasks.high }, { value: 'urgent', label: t.tasks.urgent }]} />
             </div>
+            {formError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{formError}</div>}
             <div className="flex justify-end gap-3 pt-4 border-t border-cream-200">
-              <Button variant="secondary" onClick={() => setModalOpen(false)}>{t.common.cancel}</Button>
+              <Button variant="secondary" onClick={() => { setModalOpen(false); setFormError(''); }}>{t.common.cancel}</Button>
               <Button onClick={save}>{t.tasks.createTask}</Button>
             </div>
           </div>

@@ -36,6 +36,7 @@ export const pt: Translations = {
     welcome: 'Bem-vindo de volta',
     noResults: 'Nenhum resultado encontrado',
     confirmDelete: 'Tem certeza que deseja remover?',
+    fillRequired: 'Por favor, preencha todos os campos obrigatorios.',
     language: 'Idioma',
   },
 
