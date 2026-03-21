@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { useData } from '../../hooks/useData';
 import Header from '../../components/layout/Header';
 import Card, { CardBody } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -21,21 +22,21 @@ export default function TasksPage() {
   const [tab, setTab] = useState<'active' | 'completed'>('active');
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', horseId: '', assignedTo: '', dueDate: '', priority: 'medium' as TaskPriority });
-  const [tick, setTick] = useState(0);
+  const rev = useData('*');
 
-  const tasks = useMemo(() => { const all = api.getTasks(); return tab === 'active' ? all.filter((x) => !x.completed) : all.filter((x) => x.completed); }, [tab, tick]);
+  const tasks = useMemo(() => { const all = api.getTasks(); return tab === 'active' ? all.filter((x) => !x.completed) : all.filter((x) => x.completed); }, [tab, rev]);
   const todayTasks = tasks.filter((x) => isToday(parseISO(x.dueDate)));
   const otherTasks = tasks.filter((x) => !isToday(parseISO(x.dueDate)));
   const workers = api.getUsers().filter((u) => u.role === 'worker' || u.role === 'admin');
   const horses = api.getHorses();
 
-  const toggleComplete = (id: string, current: boolean) => { api.updateTask(id, { completed: !current }); setTick((x) => x + 1); };
+  const toggleComplete = (id: string, current: boolean) => { api.updateTask(id, { completed: !current }); };
   const save = () => {
     if (!form.title || !form.dueDate || !form.assignedTo) return;
     const worker = workers.find((w) => w.id === form.assignedTo);
     const horse = horses.find((h) => h.id === form.horseId);
     api.createTask({ ...form, assignedToName: worker?.name || '', horseName: horse?.name, completed: false, createdAt: new Date().toISOString().split('T')[0], createdBy: user!.id });
-    setModalOpen(false); setForm({ title: '', description: '', horseId: '', assignedTo: '', dueDate: '', priority: 'medium' }); setTick((x) => x + 1);
+    setModalOpen(false); setForm({ title: '', description: '', horseId: '', assignedTo: '', dueDate: '', priority: 'medium' });
   };
 
   const renderTask = (x: Task) => (

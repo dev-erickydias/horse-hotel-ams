@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { useData } from '../../hooks/useData';
 import Header from '../../components/layout/Header';
 import Card, { CardBody } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -82,8 +83,8 @@ export default function TransportPage() {
   const { t } = useLang();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ horseId: '', horseName: '', transportDate: '', transportTime: '', origin: 'Horse Hotel', destination: '', driver: '', driverId: '', notes: '', status: 'scheduled' as Transport['status'] });
-  const [tick, setTick] = useState(0);
-  const transports = useMemo(() => api.getTransports(), [tick]);
+  const rev = useData('*');
+  const transports = useMemo(() => api.getTransports(), [rev]);
   const horses = api.getHorses();
 
   const save = () => {
@@ -102,9 +103,9 @@ export default function TransportPage() {
     });
     setModalOpen(false);
     setForm({ horseId: '', horseName: '', transportDate: '', transportTime: '', origin: 'Horse Hotel', destination: '', driver: '', driverId: '', notes: '', status: 'scheduled' });
-    setTick((x) => x + 1);
+   
   };
-  const updateStatus = (id: string, status: Transport['status']) => { api.updateTransport(id, { status }); setTick((x) => x + 1); };
+  const updateStatus = (id: string, status: Transport['status']) => { api.updateTransport(id, { status }); };
 
   const statusLabel = (s: string) => s === 'scheduled' ? t.common.scheduled : s === 'in-transit' ? t.common.inTransit : t.common.completed;
 

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { useData } from '../../hooks/useData';
 import Header from '../../components/layout/Header';
 import Card, { CardBody } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -21,7 +22,7 @@ export default function AnnouncementsPage() {
   const { t } = useLang();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ title: '', content: '', category: 'general' as 'general' | 'maintenance' | 'transport' | 'important', audience: 'all' as AnnouncementAudience, pinned: false });
-  const [tick, setTick] = useState(0);
+  const rev = useData('*');
   const [showArchived, setShowArchived] = useState(false);
 
   const isAdmin = isRole('admin');
@@ -31,13 +32,13 @@ export default function AnnouncementsPage() {
   const announcements = useMemo(() => {
     const all = user ? api.getAnnouncementsForRole(user.role) : [];
     return [...all.filter((a) => a.pinned), ...all.filter((a) => !a.pinned)];
-  }, [tick, user]);
+  }, [rev, user]);
 
   // Archived announcements (staff only)
   const archivedAnnouncements = useMemo(() => {
     if (!isStaff) return [];
     return api.getArchivedAnnouncements();
-  }, [tick, isStaff]);
+  }, [rev, isStaff]);
 
   const save = () => {
     if (!form.title || !form.content) return;
@@ -52,23 +53,23 @@ export default function AnnouncementsPage() {
       link: '/app/announcements',
       audience: audience,
     });
-    setModalOpen(false); setForm({ title: '', content: '', category: 'general', audience: 'all', pinned: false }); setTick((x) => x + 1);
+    setModalOpen(false); setForm({ title: '', content: '', category: 'general', audience: 'all', pinned: false });
   };
 
   const handleArchive = (id: string) => {
     api.archiveAnnouncement(id);
-    setTick((x) => x + 1);
+   
   };
 
   const handleRestore = (id: string) => {
     api.restoreAnnouncement(id);
-    setTick((x) => x + 1);
+   
   };
 
   const handleDeletePermanently = (id: string) => {
     if (!confirm(t.common.confirmDelete)) return;
     api.deleteAnnouncement(id);
-    setTick((x) => x + 1);
+   
   };
 
   const daysUntilPurge = (archivedAt?: string) => {

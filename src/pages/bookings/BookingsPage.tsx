@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { useData } from '../../hooks/useData';
 import Header from '../../components/layout/Header';
 import Card, { CardBody } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -25,7 +26,7 @@ export default function BookingsPage() {
   const [reviewModal, setReviewModal] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [form, setForm] = useState({ title: '', description: '', facilityType: 'arena', requestedDate: '', requestedTime: '', requestedEndTime: '' });
-  const [tick, setTick] = useState(0);
+  const rev = useData('*');
 
   const isAdmin = isRole('admin');
 
@@ -33,7 +34,7 @@ export default function BookingsPage() {
     let list = isStaff ? api.getRequests() : api.getRequestsByClient(user!.id);
     if (filter !== 'all') list = list.filter((r) => r.status === filter);
     return list;
-  }, [user, isStaff, filter, tick]);
+  }, [user, isStaff, filter, rev]);
 
   const submitRequest = () => {
     if (!form.title || !form.description) return;
@@ -55,7 +56,7 @@ export default function BookingsPage() {
       audience: 'staff',
       sourceId: newReq.id,
     });
-    setModalOpen(false); setForm({ title: '', description: '', facilityType: 'arena', requestedDate: '', requestedTime: '', requestedEndTime: '' }); setTick((x) => x + 1);
+    setModalOpen(false); setForm({ title: '', description: '', facilityType: 'arena', requestedDate: '', requestedTime: '', requestedEndTime: '' });
   };
 
   const reviewRequest = (id: string, status: RequestStatus) => {
@@ -73,7 +74,7 @@ export default function BookingsPage() {
         targetUserId: req.clientId,
       });
     }
-    setReviewModal(null); setAdminNotes(''); setTick((x) => x + 1);
+    setReviewModal(null); setAdminNotes('');
   };
 
   const reviewing = requests.find((r) => r.id === reviewModal);

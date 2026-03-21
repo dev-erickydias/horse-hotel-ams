@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 import { api } from '../../services/data';
+import { useData } from '../../hooks/useData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import LangSwitcher from '../ui/LangSwitcher';
@@ -19,13 +20,13 @@ export default function Header({ title }: { title: string }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [tick, setTick] = useState(0);
+  const rev = useData('*');
   const ref = useRef<HTMLDivElement>(null);
 
   const loadNotifications = () => {
     if (user) setNotifications(api.getNotificationsForUser(user.id, user.role));
   };
-  useEffect(() => { loadNotifications(); }, [open, user, tick]);
+  useEffect(() => { loadNotifications(); }, [open, user, rev]);
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -60,7 +61,7 @@ export default function Header({ title }: { title: string }) {
       targetUserId: req.clientId,
     });
     api.markNotificationRead(n.id);
-    setTick((x) => x + 1);
+   
   };
 
   const handleReject = (n: Notification, e: React.MouseEvent) => {
@@ -79,7 +80,7 @@ export default function Header({ title }: { title: string }) {
       targetUserId: req.clientId,
     });
     api.markNotificationRead(n.id);
-    setTick((x) => x + 1);
+   
   };
 
   const handleNotificationClick = (n: Notification) => {

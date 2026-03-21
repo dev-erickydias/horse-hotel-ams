@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { useData } from '../../hooks/useData';
 import Header from '../../components/layout/Header';
 import Card, { CardBody } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -37,7 +38,7 @@ export default function HorsesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Horse | null>(null);
   const [form, setForm] = useState<Omit<Horse, 'id'>>(emptyHorse);
-  const [tick, setTick] = useState(0);
+  const rev = useData('*');
 
   const isAdmin = isRole('admin');
   const isWorker = isRole('worker');
@@ -62,7 +63,7 @@ export default function HorsesPage() {
       h.passportId.toLowerCase().includes(search.toLowerCase())
     );
     return list;
-  }, [user, isStaff, search, filter, tick]);
+  }, [user, isStaff, search, filter, rev]);
 
   const ownerUsers = api.getUsers().filter((u) => u.role === 'client' || u.role === 'worker');
 
@@ -75,13 +76,13 @@ export default function HorsesPage() {
     const data = { ...form, ownerName: owner?.name || form.ownerName };
     if (editing) api.updateHorse(editing.id, data);
     else api.createHorse(data);
-    setModalOpen(false); setTick((x) => x + 1);
+    setModalOpen(false);
   };
 
   const deleteHorse = (id: string) => {
     if (!isAdmin) return;
     if (!confirm(t.common.confirmDelete)) return;
-    api.deleteHorse(id); setTick((x) => x + 1);
+    api.deleteHorse(id);
   };
 
   const upd = (key: keyof typeof form, val: any) => setForm((f) => ({ ...f, [key]: val }));

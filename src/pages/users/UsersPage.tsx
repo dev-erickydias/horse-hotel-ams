@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { useData } from '../../hooks/useData';
 import { isValidEmail, sanitizePhone } from '../../utils/sanitize';
 import { hashPassword } from '../../utils/password';
 import Header from '../../components/layout/Header';
@@ -25,7 +26,7 @@ export default function UsersPage() {
   const [editRoleUser, setEditRoleUser] = useState<string | null>(null);
   const [editRoleValue, setEditRoleValue] = useState<Role>('client');
   const [search, setSearch] = useState('');
-  const [tick, setTick] = useState(0);
+  const rev = useData('*');
   const allUsers = (() => { void tick; return api.getUsers().filter((u) => u.email !== MASTER_ADMIN_EMAIL); })();
   const allHorses = (() => { void tick; return api.getHorses(); })();
   const pendingUsers = allUsers.filter((u) => u.status === 'pending');
@@ -66,12 +67,12 @@ export default function UsersPage() {
       link: '/app/users',
       audience: 'staff',
     });
-    setTick((x) => x + 1);
+   
   };
 
   const handleReject = (userId: string) => {
     api.deleteUser(userId);
-    setTick((x) => x + 1);
+   
   };
 
   const [saving, setSaving] = useState(false);
@@ -99,7 +100,7 @@ export default function UsersPage() {
       setModalOpen(false);
       setForm({ name: '', email: '', role: 'worker', phone: '', password: '' });
       setSearch('');
-      setTick((x) => x + 1);
+     
     } finally {
       setSaving(false);
     }
@@ -108,7 +109,7 @@ export default function UsersPage() {
   const handleChangeRole = (userId: string) => {
     api.updateUser(userId, { role: editRoleValue });
     setEditRoleUser(null);
-    setTick((x) => x + 1);
+   
   };
 
   const roleLabels: Record<string, string> = { admin: t.users.admin, worker: t.users.worker, client: t.users.client };
@@ -246,7 +247,7 @@ export default function UsersPage() {
                             {t.users.changeRole}
                           </Button>
                           <Button size="sm" variant="ghost" icon={<Trash2 size={14} />}
-                            onClick={() => { if (confirm(t.common.confirmDelete)) { api.deleteUser(u.id); setTick((x) => x + 1); } }}
+                            onClick={() => { if (confirm(t.common.confirmDelete)) { api.deleteUser(u.id); } }}
                             className="text-red-500 hover:text-red-600 hover:bg-red-50">
                             {t.users.deleteUser}
                           </Button>

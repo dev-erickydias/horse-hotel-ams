@@ -40,6 +40,23 @@ function camelToSnake(obj: Record<string, unknown>): Record<string, unknown> {
   return result;
 }
 
+// ── Event system for reactive updates ───────────────────────
+export type DataEvent = 'users' | 'horses' | 'tasks' | 'requests' | 'announcements' | 'transports' | 'notifications' | '*';
+type Listener = () => void;
+
+const listeners = new Map<DataEvent, Set<Listener>>();
+
+export function onDataChange(event: DataEvent, fn: Listener): () => void {
+  if (!listeners.has(event)) listeners.set(event, new Set());
+  listeners.get(event)!.add(fn);
+  return () => { listeners.get(event)?.delete(fn); };
+}
+
+function emit(event: DataEvent) {
+  listeners.get(event)?.forEach((fn) => fn());
+  if (event !== '*') listeners.get('*')?.forEach((fn) => fn());
+}
+
 // ── In-memory state (cache) ─────────────────────────────────
 interface AppState {
   users: User[]; horses: Horse[]; tasks: Task[]; requests: ClientRequest[];
@@ -53,6 +70,62 @@ let state: AppState = {
 
 let _initialized = false;
 let _initPromise: Promise<void> | null = null;
+
+// ── Supabase Realtime subscriptions ─────────────────────────
+function startRealtimeSubscriptions() {
+  if (!isSupabaseConfigured) return;
+
+  const tableToKey: Record<string, keyof AppState> = {
+    [T.users]: 'users',
+    [T.horses]: 'horses',
+    [T.tasks]: 'tasks',
+    [T.requests]: 'requests',
+    [T.announcements]: 'announcements',
+    [T.transports]: 'transports',
+    [T.notifications]: 'notifications',
+  };
+
+  // Subscribe to all tables
+  Object.entries(T).forEach(([key, table]) => {
+    supabase
+      .channel(`realtime-${key}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
+        const stateKey = tableToKey[table];
+        if (!stateKey) return;
+
+        const eventType = payload.eventType; // INSERT, UPDATE, DELETE
+
+        if (eventType === 'INSERT' && payload.new) {
+          const item = snakeToCamel(payload.new as Record<string, unknown>);
+          const arr = state[stateKey] as { id: string }[];
+          // Avoid duplicates (we may have already inserted locally)
+          if (!arr.find((x) => x.id === (item as { id: string }).id)) {
+            arr.unshift(item as any);
+            emit(stateKey as DataEvent);
+          }
+        } else if (eventType === 'UPDATE' && payload.new) {
+          const item = snakeToCamel(payload.new as Record<string, unknown>) as { id: string };
+          const arr = state[stateKey] as { id: string }[];
+          const idx = arr.findIndex((x) => x.id === item.id);
+          if (idx !== -1) {
+            arr[idx] = { ...arr[idx], ...item };
+            emit(stateKey as DataEvent);
+          }
+        } else if (eventType === 'DELETE' && payload.old) {
+          const oldItem = payload.old as { id: string };
+          const arr = state[stateKey] as { id: string }[];
+          const idx = arr.findIndex((x) => x.id === oldItem.id);
+          if (idx !== -1) {
+            arr.splice(idx, 1);
+            emit(stateKey as DataEvent);
+          }
+        }
+      })
+      .subscribe();
+  });
+
+  console.info('[Realtime] Subscribed to all tables');
+}
 
 // ── Initialize: fetch all from Supabase ─────────────────────
 export async function initializeData(): Promise<void> {
@@ -86,7 +159,6 @@ export async function initializeData(): Promise<void> {
 
       const [users, horses, tasks, requests, announcements, transports, notifications] = results;
 
-      // Log any Supabase errors
       results.forEach((r, i) => {
         if (r.error) console.error(`[Supabase] Error loading table ${Object.values(T)[i]}:`, r.error);
       });
@@ -101,10 +173,9 @@ export async function initializeData(): Promise<void> {
 
       console.info(`[DataInit] Loaded ${state.users.length} users, ${state.horses.length} horses, ${state.tasks.length} tasks`);
 
-      // Seed demo data when content tables are empty (horses, tasks, etc.)
+      // Seed demo data when content tables are empty
       if (state.horses.length === 0 && state.tasks.length === 0 && state.transports.length === 0) {
         console.info('[DataInit] No content data found — seeding demo data...');
-        // Merge seed users with existing DB users (avoid duplicates by email)
         const existingEmails = new Set(state.users.map((u) => u.email));
         const newSeedUsers = seedUsers.filter((u) => !existingEmails.has(u.email));
         state.users = [...state.users, ...newSeedUsers];
@@ -117,10 +188,13 @@ export async function initializeData(): Promise<void> {
         console.info('[DataInit] Demo data seeded successfully.');
       }
 
+      // Start realtime subscriptions after initial load
+      startRealtimeSubscriptions();
+
       _initialized = true;
     } catch (err) {
       console.error('Failed to initialize data from Supabase:', err);
-      _initialized = true; // still mark as initialized so app doesn't hang
+      _initialized = true;
     }
   })();
 
@@ -156,13 +230,14 @@ function dbDelete(table: string, id: string) {
   });
 }
 
-// ── Sync CRUD (cache-first, write-through to Supabase) ──────
+// ── Sync CRUD (cache-first, write-through, emit events) ─────
 function create<T extends { id: string }>(key: keyof AppState, table: string, item: Omit<T, 'id'>): T {
   const sanitized = sanitizeObject(item);
   const id = crypto.randomUUID();
   const newItem = { ...sanitized, id } as T;
   (state[key] as T[]).unshift(newItem);
   dbInsert(table, { ...sanitized, id });
+  emit(key as DataEvent);
   return newItem;
 }
 
@@ -173,6 +248,7 @@ function update<T extends { id: string }>(key: keyof AppState, table: string, id
   const sanitized = sanitizeObject(updates);
   arr[idx] = { ...arr[idx], ...sanitized };
   dbUpdate(table, id, sanitized as Record<string, unknown>);
+  emit(key as DataEvent);
   return arr[idx];
 }
 
@@ -182,21 +258,21 @@ function remove(key: keyof AppState, table: string, id: string): boolean {
   if (idx === -1) return false;
   arr.splice(idx, 1);
   dbDelete(table, id);
+  emit(key as DataEvent);
   return true;
 }
 
 // ── Reset: clear Supabase data (dangerous — requires master admin) ──
 export function resetData(callerEmail: string) {
-  // Only the master admin can reset all data
   if (callerEmail !== MASTER_ADMIN_EMAIL) {
     console.error('[Security] Unauthorized resetData attempt by:', callerEmail);
     return;
   }
-  // Clear all tables in Supabase
   Object.values(T).forEach((table) => {
     supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000').then(() => {});
   });
   state = { users: [], horses: [], tasks: [], requests: [], announcements: [], transports: [], notifications: [] };
+  emit('*');
 }
 
 // ── Public API ──────────────────────────────────────────────
@@ -234,7 +310,6 @@ export const api = {
   // ── Announcements ──
   getAnnouncements: () => [...state.announcements],
   getAnnouncementsForRole: (role: string) => {
-    // Auto-purge archived announcements older than 10 days
     const tenDaysAgo = new Date(); tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
     const tenDaysAgoStr = tenDaysAgo.toISOString();
     const toDelete = state.announcements.filter((a) => a.archived && a.archivedAt && a.archivedAt < tenDaysAgoStr);
@@ -285,6 +360,7 @@ export const api = {
         dbUpdate(T.notifications, n.id, { read: true });
       }
     });
+    emit('notifications');
   },
   addNotification: (n: Omit<Notification, 'id'>) => create<Notification>('notifications', T.notifications, n),
 
@@ -292,7 +368,6 @@ export const api = {
   getScheduleEvents: (): ScheduleEvent[] => {
     const events: ScheduleEvent[] = [];
 
-    // Approved bookings
     state.requests.filter((r) => r.status === 'approved' && r.requestedDate).forEach((r) => {
       events.push({
         id: `req-${r.id}`, type: 'booking', title: `${r.facilityType || 'Facility'}: ${r.clientName}`,
@@ -302,7 +377,6 @@ export const api = {
       });
     });
 
-    // Transports
     state.transports.forEach((tr) => {
       events.push({
         id: `tr-${tr.id}`, type: 'transport', title: `Transport: ${tr.horseName}`,
@@ -312,7 +386,6 @@ export const api = {
       });
     });
 
-    // Horse arrivals
     state.horses.filter((h) => (h.status === 'upcoming' || h.status === 'checked-in') && h.checkIn).forEach((h) => {
       events.push({
         id: `arr-${h.id}`, type: 'arrival', title: `Arrival: ${h.name}`,
@@ -322,7 +395,6 @@ export const api = {
       });
     });
 
-    // Horse departures
     state.horses.filter((h) => (h.status === 'checked-in' || h.status === 'upcoming') && h.checkOut).forEach((h) => {
       events.push({
         id: `dep-${h.id}`, type: 'departure', title: `Departure: ${h.name}`,

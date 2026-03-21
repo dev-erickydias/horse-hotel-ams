@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { useData } from '../../hooks/useData';
 import { sanitizePhone } from '../../utils/sanitize';
 import { verifyPassword, hashPassword } from '../../utils/password';
 import Header from '../../components/layout/Header';
@@ -38,12 +39,12 @@ export default function ProfilePage() {
   const [horseModal, setHorseModal] = useState(false);
   const [editingHorse, setEditingHorse] = useState<Horse | null>(null);
   const [horseForm, setHorseForm] = useState(emptyClientHorse);
-  const [tick, setTick] = useState(0);
+  const rev = useData('*');
 
   const myHorses = useMemo(() => {
     void tick;
     return user ? api.getHorsesByOwner(user.id) : [];
-  }, [user, tick]);
+  }, [user, rev]);
 
   const currentUser = user ? api.getUser(user.id) : null;
 
@@ -57,7 +58,7 @@ export default function ProfilePage() {
     setEditingProfile(false);
     setSavedMsg(t.profile.savedSuccess);
     setTimeout(() => setSavedMsg(''), 3000);
-    setTick((x) => x + 1);
+   
   };
 
   const [pwLoading, setPwLoading] = useState(false);
@@ -136,7 +137,7 @@ export default function ProfilePage() {
       });
     }
     setHorseModal(false);
-    setTick((x) => x + 1);
+   
   };
 
   const updH = (key: string, val: any) => setHorseForm((f) => ({ ...f, [key]: val }));

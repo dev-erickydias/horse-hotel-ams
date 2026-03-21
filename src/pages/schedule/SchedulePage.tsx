@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { useData } from '../../hooks/useData';
 import Header from '../../components/layout/Header';
 import Card, { CardBody } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -29,7 +30,7 @@ export default function SchedulePage() {
   const [editModal, setEditModal] = useState<ScheduleEvent | null>(null);
   const [editTime, setEditTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
-  const [tick, setTick] = useState(0);
+  const rev = useData('*');
 
   const allEvents = useMemo(() => {
     const events = api.getScheduleEvents();
@@ -41,7 +42,7 @@ export default function SchedulePage() {
       });
     }
     return events;
-  }, [tick, isStaff, user]);
+  }, [rev, isStaff, user]);
 
   // Week view: get 7 days starting from Monday
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -83,7 +84,7 @@ export default function SchedulePage() {
       api.updateRequest(editModal.sourceId, { requestedTime: editTime || undefined, requestedEndTime: editEndTime || undefined });
     }
     setEditModal(null);
-    setTick((x) => x + 1);
+   
   };
 
   const typeLabels: Record<string, string> = {

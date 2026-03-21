@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { useData } from '../../hooks/useData';
 import Header from '../../components/layout/Header';
 import Card, { CardBody } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -13,11 +14,12 @@ export default function DashboardPage() {
   const { user, isStaff } = useAuth();
   const { t } = useLang();
   const navigate = useNavigate();
+  const rev = useData('horses', 'tasks', 'requests', 'transports');
 
-  const horses = useMemo(() => isStaff ? api.getHorses() : api.getHorsesByOwner(user!.id), [user, isStaff]);
-  const tasks = useMemo(() => api.getTasks(), []);
-  const requests = useMemo(() => api.getRequests(), []);
-  const transports = useMemo(() => api.getTransports(), []);
+  const horses = useMemo(() => isStaff ? api.getHorses() : api.getHorsesByOwner(user!.id), [user, isStaff, rev]);
+  const tasks = useMemo(() => api.getTasks(), [rev]);
+  const requests = useMemo(() => api.getRequests(), [rev]);
+  const transports = useMemo(() => api.getTransports(), [rev]);
 
   const checkedIn = horses.filter((h) => h.status === 'checked-in');
   const arrivingToday = horses.filter((h) => h.checkIn && isToday(parseISO(h.checkIn)) && h.status === 'upcoming');
