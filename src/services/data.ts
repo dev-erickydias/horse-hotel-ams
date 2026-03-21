@@ -206,7 +206,6 @@ export const api = {
   getUser: (id: string) => state.users.find((u) => u.id === id),
   getUserByEmail: (email: string) => state.users.find((u) => u.email === email),
   getUserByToken: (token: string) => state.users.find((u) => u.inviteToken === token),
-  getUserByResetToken: (token: string) => state.users.find((u) => u.resetToken === token),
   getUserBySessionToken: (token: string) => state.users.find((u) => u.sessionToken === token),
   createUser: (u: Omit<User, 'id'>) => create<User>('users', T.users, u),
   updateUser: (id: string, u: Partial<User>) => update<User>('users', T.users, id, u),

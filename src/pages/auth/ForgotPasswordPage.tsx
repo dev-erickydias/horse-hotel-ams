@@ -3,50 +3,11 @@ import { Link } from 'react-router-dom';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
 import { isValidEmail } from '../../utils/sanitize';
+import { createResetToken, isResetRateLimited } from '../../services/resetTokenStore';
 import LangSwitcher from '../../components/ui/LangSwitcher';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Mail, ArrowLeft, CheckCircle, Shield, Copy, Check } from 'lucide-react';
-
-// ── Rate limiting for reset requests ───────────────────
-const RESET_MAX_ATTEMPTS = 3;
-const RESET_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
-
-interface ResetAttempts {
-  count: number;
-  firstAttempt: number;
-}
-
-const resetAttemptsMap = new Map<string, ResetAttempts>();
-
-function isResetRateLimited(email: string): boolean {
-  const entry = resetAttemptsMap.get(email);
-  if (!entry) return false;
-  if (Date.now() - entry.firstAttempt > RESET_COOLDOWN_MS) {
-    resetAttemptsMap.delete(email);
-    return false;
-  }
-  return entry.count >= RESET_MAX_ATTEMPTS;
-}
-
-function recordResetAttempt(email: string): void {
-  const entry = resetAttemptsMap.get(email);
-  if (!entry || Date.now() - entry.firstAttempt > RESET_COOLDOWN_MS) {
-    resetAttemptsMap.set(email, { count: 1, firstAttempt: Date.now() });
-  } else {
-    entry.count++;
-  }
-}
-
-// ── Secure token generation (256-bit) ──────────────────
-function generateResetToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-// Token expiry: 1 hour from now
-const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000;
 
 /* Grass blade component */
 const GrassBlade = ({ style, height = 40, delay = 0 }: { style?: React.CSSProperties; height?: number; delay?: number }) => (
@@ -85,7 +46,6 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    // Rate limiting — per email to prevent abuse
     if (isResetRateLimited(normalizedEmail)) {
       setError(t.auth.forgotPasswordRateLimited);
       return;
@@ -93,31 +53,19 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
     try {
-      recordResetAttempt(normalizedEmail);
-
       const user = api.getUserByEmail(normalizedEmail);
 
-      // SECURITY: Always show success message to prevent email enumeration
-      // But only generate a token if the user actually exists and is active
+      // Only generate token if user exists and is active
       if (user && user.status === 'active') {
-        const token = generateResetToken();
-        const expiry = new Date(Date.now() + RESET_TOKEN_EXPIRY_MS).toISOString();
-
-        // Store the reset token and expiry on the user
-        api.updateUser(user.id, {
-          resetToken: token,
-          resetTokenExpiry: expiry,
-        });
-
-        // Build the reset link
+        const token = createResetToken(normalizedEmail);
         const link = `${window.location.origin}/reset-password/${token}`;
         setResetLink(link);
 
-        // Notify admins about the password reset request
+        // Notify admins
         api.addNotification({
           type: 'registration',
           title: `Password Reset: ${user.name}`,
-          message: `${user.name} (${user.email}) has requested a password reset. Link expires in 1 hour.`,
+          message: `${user.name} (${user.email}) requested a password reset. Link expires in 1 hour.`,
           read: false,
           createdAt: new Date().toISOString(),
           link: '/app/users',
@@ -125,7 +73,7 @@ export default function ForgotPasswordPage() {
         });
       }
 
-      // Always show success (even if user doesn't exist — prevents enumeration)
+      // Always show success (prevents email enumeration)
       setSuccess(true);
     } finally {
       setLoading(false);
@@ -143,10 +91,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-body bg-cream-50">
-      {/* Horseshoe pattern background */}
       <div className="absolute inset-0 horseshoe-pattern opacity-30" />
 
-      {/* Grass at bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-[60px] overflow-hidden pointer-events-none">
         {grassBlades.map((blade, i) => (
           <GrassBlade key={i} style={{ left: blade.left }} height={blade.height} delay={blade.delay} />
@@ -181,7 +127,6 @@ export default function ForgotPasswordPage() {
                 <p className="text-sm text-stone-600">{t.auth.forgotPasswordSuccess}</p>
               </div>
 
-              {/* Show reset link if generated (admin/self-service) */}
               {resetLink && (
                 <div className="p-4 rounded-xl bg-gold-50 border border-gold-200 space-y-3">
                   <div className="flex items-center gap-2 text-sm font-semibold text-gold-800">
@@ -203,7 +148,7 @@ export default function ForgotPasswordPage() {
                     </button>
                   </div>
                   <p className="text-[11px] text-gold-700">
-                    {t.auth.resetTokenExpired?.replace('Please request a new one.', '').replace('Solicite um novo.', '').replace('Vraag een nieuwe aan.', '').trim() || 'Expires in 1 hour.'}
+                    Link expira em 1 hora.
                   </p>
                 </div>
               )}

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
 import { hashPassword } from '../../utils/password';
+import { validateResetToken, consumeResetToken } from '../../services/resetTokenStore';
 import LangSwitcher from '../../components/ui/LangSwitcher';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -34,29 +35,30 @@ export default function ResetPasswordPage() {
     delay: Math.random() * 4,
   }));
 
-  // Validate token on render
-  const user = token ? api.getUserByResetToken(token) : undefined;
-
-  // Check token expiry
-  const isTokenExpired = (): boolean => {
-    if (!user?.resetTokenExpiry) return true;
-    return new Date(user.resetTokenExpiry) < new Date();
-  };
-
-  const tokenValid = !!user && !isTokenExpired();
+  // Validate token — returns the email if valid
+  const emailFromToken = token ? validateResetToken(token) : null;
+  const user = emailFromToken ? api.getUserByEmail(emailFromToken) : undefined;
+  const tokenValid = !!emailFromToken && !!user;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Re-validate token (could have been used in another tab)
-    const freshUser = token ? api.getUserByResetToken(token) : undefined;
-    if (!freshUser || !freshUser.resetTokenExpiry || new Date(freshUser.resetTokenExpiry) < new Date()) {
+    if (!token) return;
+
+    // Re-validate token at submission time
+    const freshEmail = validateResetToken(token);
+    if (!freshEmail) {
       setError(t.auth.resetTokenInvalid);
       return;
     }
 
-    // Password validation
+    const freshUser = api.getUserByEmail(freshEmail);
+    if (!freshUser) {
+      setError(t.auth.resetTokenInvalid);
+      return;
+    }
+
     if (password.length < 6) {
       setError(t.auth.passwordTooShort);
       return;
@@ -70,16 +72,16 @@ export default function ResetPasswordPage() {
     try {
       const hashedPw = await hashPassword(password);
 
-      // Update password and clear reset token (single-use)
+      // Update password and clear session (force re-login)
       api.updateUser(freshUser.id, {
         password: hashedPw,
-        resetToken: undefined,
-        resetTokenExpiry: undefined,
-        // Also clear any existing session to force re-login with new password
         sessionToken: undefined,
       });
 
-      // Notify admins that password was reset
+      // Consume the token (single-use)
+      consumeResetToken(token);
+
+      // Notify admins
       api.addNotification({
         type: 'registration',
         title: `Password Reset Completed: ${freshUser.name}`,
@@ -98,10 +100,8 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-body bg-cream-50">
-      {/* Horseshoe pattern background */}
       <div className="absolute inset-0 horseshoe-pattern opacity-30" />
 
-      {/* Grass at bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-[60px] overflow-hidden pointer-events-none">
         {grassBlades.map((blade, i) => (
           <GrassBlade key={i} style={{ left: blade.left }} height={blade.height} delay={blade.delay} />
@@ -143,7 +143,7 @@ export default function ResetPasswordPage() {
                 <AlertTriangle className="text-red-500" size={28} />
               </div>
               <h2 className="text-lg font-semibold text-stone-800 font-display">{t.auth.resetPasswordTitle}</h2>
-              <p className="text-sm text-red-600">{isTokenExpired() && user ? t.auth.resetTokenExpired : t.auth.resetTokenInvalid}</p>
+              <p className="text-sm text-red-600">{t.auth.resetTokenInvalid}</p>
               <div className="flex gap-3">
                 <Link to="/forgot-password">
                   <Button variant="secondary" size="sm">{t.auth.forgotPasswordSubmit}</Button>
@@ -165,7 +165,6 @@ export default function ResetPasswordPage() {
                 </div>
               </div>
 
-              {/* Security info */}
               <div className="mb-5 p-3 rounded-xl bg-forest-50 border border-forest-200/60">
                 <div className="flex items-start gap-2">
                   <Shield size={14} className="text-forest-600 shrink-0 mt-0.5" />
@@ -200,7 +199,6 @@ export default function ResetPasswordPage() {
                   required
                 />
 
-                {/* Password strength indicator */}
                 {password.length > 0 && (
                   <div className="space-y-1">
                     <div className="flex gap-1">
@@ -216,7 +214,7 @@ export default function ResetPasswordPage() {
                       ))}
                     </div>
                     <p className="text-[11px] text-stone-400 font-body">
-                      {password.length < 6 ? t.auth.passwordTooShort : password.length >= 12 ? 'Strong' : password.length >= 8 ? 'Good' : 'Minimum reached'}
+                      {password.length < 6 ? t.auth.passwordTooShort : password.length >= 12 ? 'Strong' : password.length >= 8 ? 'Good' : 'OK'}
                     </p>
                   </div>
                 )}
