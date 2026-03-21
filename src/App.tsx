@@ -38,7 +38,7 @@ function AppRoutes() {
       <Route path="/signup" element={user ? <Navigate to="/app/dashboard" replace /> : <SignupPage />} />
       <Route path="/set-password/:token" element={<SetPasswordPage />} />
       <Route path="/forgot-password" element={user ? <Navigate to="/app/dashboard" replace /> : <ForgotPasswordPage />} />
-      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="horses" element={<HorsesPage />} />

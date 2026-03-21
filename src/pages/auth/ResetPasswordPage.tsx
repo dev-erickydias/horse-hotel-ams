@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
+import { supabase } from '../../services/supabase';
 import { hashPassword } from '../../utils/password';
-import { validateResetToken, consumeResetToken } from '../../services/resetTokenStore';
 import LangSwitcher from '../../components/ui/LangSwitcher';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Lock, Eye, EyeOff, CheckCircle, AlertTriangle, ArrowLeft, Shield } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle, AlertTriangle, ArrowLeft, Shield, Loader2 } from 'lucide-react';
 
 /* Grass blade component */
 const GrassBlade = ({ style, height = 40, delay = 0 }: { style?: React.CSSProperties; height?: number; delay?: number }) => (
@@ -20,14 +20,17 @@ const GrassBlade = ({ style, height = 40, delay = 0 }: { style?: React.CSSProper
 );
 
 export default function ResetPasswordPage() {
-  const { token } = useParams<{ token: string }>();
   const { t } = useLang();
+  const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [tokenInvalid, setTokenInvalid] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   const grassBlades = Array.from({ length: 50 }, (_, i) => ({
     left: `${(i / 50) * 100 + Math.random() * 1.5}%`,
@@ -35,29 +38,45 @@ export default function ResetPasswordPage() {
     delay: Math.random() * 4,
   }));
 
-  // Validate token — returns the email if valid
-  const emailFromToken = token ? validateResetToken(token) : null;
-  const user = emailFromToken ? api.getUserByEmail(emailFromToken) : undefined;
-  const tokenValid = !!emailFromToken && !!user;
+  // Listen for Supabase Auth PASSWORD_RECOVERY event
+  useEffect(() => {
+    // Check if we already have a session from the URL hash (Supabase redirects with tokens in hash)
+    const checkSession = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (session?.user?.email) {
+        setUserEmail(session.user.email);
+        setSessionReady(true);
+        return;
+      }
+
+      // If no session yet, listen for auth state change
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY' && session?.user?.email) {
+          setUserEmail(session.user.email);
+          setSessionReady(true);
+        }
+      });
+
+      // Give it a few seconds, then mark as invalid if no session
+      const timeout = setTimeout(() => {
+        if (!sessionReady) {
+          setTokenInvalid(true);
+        }
+      }, 5000);
+
+      return () => {
+        subscription.unsubscribe();
+        clearTimeout(timeout);
+      };
+    };
+
+    checkSession();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (!token) return;
-
-    // Re-validate token at submission time
-    const freshEmail = validateResetToken(token);
-    if (!freshEmail) {
-      setError(t.auth.resetTokenInvalid);
-      return;
-    }
-
-    const freshUser = api.getUserByEmail(freshEmail);
-    if (!freshUser) {
-      setError(t.auth.resetTokenInvalid);
-      return;
-    }
 
     if (password.length < 6) {
       setError(t.auth.passwordTooShort);
@@ -70,33 +89,48 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      const hashedPw = await hashPassword(password);
-
-      // Update password and clear session (force re-login)
-      api.updateUser(freshUser.id, {
-        password: hashedPw,
-        sessionToken: undefined,
+      // Update password in Supabase Auth
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password,
       });
 
-      // Consume the token (single-use)
-      consumeResetToken(token);
+      if (updateError) {
+        console.error('[PasswordReset] Supabase update error:', updateError.message);
+        setError(t.auth.resetTokenInvalid);
+        return;
+      }
 
-      // Notify admins
-      api.addNotification({
-        type: 'registration',
-        title: `Password Reset Completed: ${freshUser.name}`,
-        message: `${freshUser.name} (${freshUser.email}) has successfully reset their password.`,
-        read: false,
-        createdAt: new Date().toISOString(),
-        link: '/app/users',
-        audience: 'staff',
-      });
+      // Also update the password in the custom users table
+      const user = api.getUserByEmail(userEmail);
+      if (user) {
+        const hashedPw = await hashPassword(password);
+        api.updateUser(user.id, {
+          password: hashedPw,
+          sessionToken: undefined, // Force re-login
+        });
+
+        // Notify admins
+        api.addNotification({
+          type: 'registration',
+          title: `Password Reset Completed: ${user.name}`,
+          message: `${user.name} (${user.email}) has successfully reset their password.`,
+          read: false,
+          createdAt: new Date().toISOString(),
+          link: '/app/users',
+          audience: 'staff',
+        });
+      }
+
+      // Sign out from Supabase Auth (user will login via custom auth)
+      await supabase.auth.signOut();
 
       setSuccess(true);
     } finally {
       setLoading(false);
     }
   };
+
+  const userName = userEmail ? api.getUserByEmail(userEmail)?.name : undefined;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-body bg-cream-50">
@@ -137,7 +171,7 @@ export default function ResetPasswordPage() {
                 <Button icon={<ArrowLeft size={16} />}>{t.auth.backToLogin}</Button>
               </Link>
             </div>
-          ) : !tokenValid ? (
+          ) : tokenInvalid ? (
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
                 <AlertTriangle className="text-red-500" size={28} />
@@ -152,6 +186,11 @@ export default function ResetPasswordPage() {
                   <Button size="sm" icon={<ArrowLeft size={14} />}>{t.auth.backToLogin}</Button>
                 </Link>
               </div>
+            </div>
+          ) : !sessionReady ? (
+            <div className="flex flex-col items-center text-center space-y-4 py-4">
+              <Loader2 size={32} className="text-forest-600 animate-spin" />
+              <p className="text-sm text-stone-500 font-body">Validando link de redefinicao...</p>
             </div>
           ) : (
             <>
@@ -169,7 +208,7 @@ export default function ResetPasswordPage() {
                 <div className="flex items-start gap-2">
                   <Shield size={14} className="text-forest-600 shrink-0 mt-0.5" />
                   <p className="text-xs text-forest-700">
-                    {user?.name} ({user?.email})
+                    {userName ? `${userName} (${userEmail})` : userEmail}
                   </p>
                 </div>
               </div>

@@ -1,13 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLang } from '../../contexts/LangContext';
 import { api } from '../../services/data';
 import { isValidEmail } from '../../utils/sanitize';
-import { createResetToken, isResetRateLimited } from '../../services/resetTokenStore';
+import { supabase, isSupabaseConfigured } from '../../services/supabase';
+import { isResetRateLimited, createResetToken } from '../../services/resetTokenStore';
 import LangSwitcher from '../../components/ui/LangSwitcher';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Mail, ArrowLeft, CheckCircle, Shield, Copy, Check } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 
 /* Grass blade component */
 const GrassBlade = ({ style, height = 40, delay = 0 }: { style?: React.CSSProperties; height?: number; delay?: number }) => (
@@ -23,11 +24,8 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [resetLink, setResetLink] = useState('');
-  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const { t } = useLang();
-  const linkRef = useRef<HTMLInputElement>(null);
 
   const grassBlades = Array.from({ length: 50 }, (_, i) => ({
     left: `${(i / 50) * 100 + Math.random() * 1.5}%`,
@@ -53,19 +51,35 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
     try {
+      // Record the attempt for rate limiting (via localStorage)
+      createResetToken(normalizedEmail);
+
       const user = api.getUserByEmail(normalizedEmail);
 
-      // Only generate token if user exists and is active
-      if (user && user.status === 'active') {
-        const token = createResetToken(normalizedEmail);
-        const link = `${window.location.origin}/reset-password/${token}`;
-        setResetLink(link);
+      if (user && user.status === 'active' && isSupabaseConfigured) {
+        // Ensure the user exists in Supabase Auth (create if not)
+        // signUp is idempotent-ish — if user already exists, it just errors silently
+        const tempPassword = crypto.randomUUID();
+        await supabase.auth.signUp({
+          email: normalizedEmail,
+          password: tempPassword,
+        });
+
+        // Send the password reset email via Supabase
+        const redirectUrl = `${window.location.origin}/reset-password`;
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+          redirectTo: redirectUrl,
+        });
+
+        if (resetError) {
+          console.error('[PasswordReset] Supabase error:', resetError.message);
+        }
 
         // Notify admins
         api.addNotification({
           type: 'registration',
           title: `Password Reset: ${user.name}`,
-          message: `${user.name} (${user.email}) requested a password reset. Link expires in 1 hour.`,
+          message: `${user.name} (${user.email}) requested a password reset via email.`,
           read: false,
           createdAt: new Date().toISOString(),
           link: '/app/users',
@@ -77,15 +91,6 @@ export default function ForgotPasswordPage() {
       setSuccess(true);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const copyLink = () => {
-    if (resetLink) {
-      navigator.clipboard.writeText(resetLink).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      });
     }
   };
 
@@ -126,32 +131,6 @@ export default function ForgotPasswordPage() {
                 <h2 className="text-lg font-semibold text-stone-800 font-display">{t.auth.forgotPasswordTitle}</h2>
                 <p className="text-sm text-stone-600">{t.auth.forgotPasswordSuccess}</p>
               </div>
-
-              {resetLink && (
-                <div className="p-4 rounded-xl bg-gold-50 border border-gold-200 space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-gold-800">
-                    <Shield size={14} className="text-gold-600" />
-                    Reset Link
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      ref={linkRef}
-                      readOnly
-                      value={resetLink}
-                      className="flex-1 px-3 py-2 rounded-lg bg-white border border-gold-300 text-xs font-mono text-stone-700 truncate"
-                    />
-                    <button
-                      onClick={copyLink}
-                      className="px-3 py-2 rounded-lg bg-forest-700 text-white text-xs font-medium hover:bg-forest-800 transition-colors flex items-center gap-1.5"
-                    >
-                      {copied ? <><Check size={12} /> {t.users?.linkCopied || 'Copied!'}</> : <><Copy size={12} /> {t.users?.copyLink || 'Copy'}</>}
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-gold-700">
-                    Link expira em 1 hora.
-                  </p>
-                </div>
-              )}
 
               <Link to="/login">
                 <Button className="w-full" icon={<ArrowLeft size={16} />}>{t.auth.backToLogin}</Button>
